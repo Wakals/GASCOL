@@ -3,4 +3,5 @@
 /image_results/
 /3d_models/
 /ControlNet-v1-1-nightly/
+/diff-gaussian-rasterization/
 *.safetensors
