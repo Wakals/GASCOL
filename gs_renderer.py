@@ -27,9 +27,11 @@ def quaternion_multiply(q, p):
         -x1*z0 + y1*w0 + z1*x0 + w1*y0,
          x1*y0 - y1*x0 + z1*w0 + w1*z0], dim=-1)
 
+# inverse activation
 def inverse_sigmoid(x):
     return torch.log(x/(1-x))
 
+# 调整学习率函数
 def get_expon_lr_func(
     lr_init, lr_final, lr_delay_steps=0, lr_delay_mult=1.0, max_steps=1000000
 ):
@@ -54,6 +56,7 @@ def get_expon_lr_func(
 
     return helper
 
+# 取下三角矩阵的元素
 def strip_lowerdiag(L):
     uncertainty = torch.zeros((L.shape[0], 6), dtype=torch.float, device="cuda")
     uncertainty[:, 0] = L[:, 0, 0]
@@ -67,6 +70,9 @@ def strip_lowerdiag(L):
 def strip_symmetric(sym):
     return strip_lowerdiag(sym)
 
+"""
+计算三维高斯分布的权重系数, xyzs 是位置坐标, covs 是协方差矩阵的元素
+"""
 def gaussian_3d_coeff(xyzs, covs):
     # xyzs: [N, 3]
     # covs: [N, 6]
@@ -88,6 +94,7 @@ def gaussian_3d_coeff(xyzs, covs):
         
     return torch.exp(power)
 
+# 构建旋转矩阵
 def build_rotation(r):
     norm = torch.sqrt(r[:,0]*r[:,0] + r[:,1]*r[:,1] + r[:,2]*r[:,2] + r[:,3]*r[:,3])
 
@@ -111,6 +118,7 @@ def build_rotation(r):
     R[:, 2, 2] = 1 - 2 * (x*x + y*y)
     return R
 
+# 构建放缩矩阵
 def build_scaling_rotation(s, r):
     L = torch.zeros((s.shape[0], 3, 3), dtype=torch.float, device="cuda")
     R = build_rotation(r)
@@ -122,11 +130,13 @@ def build_scaling_rotation(s, r):
     L = R @ L
     return L
 
+# 储存点云基本信息
 class BasicPointCloud(NamedTuple):
     points: np.array
     colors: np.array
     normals: np.array
 
+# GS 模型
 class GaussianModel:
 
     def setup_functions(self):
@@ -150,8 +160,8 @@ class GaussianModel:
         self.active_sh_degree = 0
         self.max_sh_degree = sh_degree  
         self._xyz = torch.empty(0)
-        self._features_dc = torch.empty(0)
-        self._features_rest = torch.empty(0)
+        self._features_dc = torch.empty(0)    # 颜色
+        self._features_rest = torch.empty(0)     # 啥也没有
         self._scaling = torch.empty(0)
         self._rotation = torch.empty(0)
         self._opacity = torch.empty(0)
@@ -205,6 +215,7 @@ class GaussianModel:
         self.denom = denom
         self.optimizer.load_state_dict(opt_dict)
 
+    # 获取各个属性的方法
     @property
     def get_scaling(self):
         return self.scaling_activation(self._scaling)
@@ -228,6 +239,7 @@ class GaussianModel:
     def get_xyz(self):
         return self._xyz
     
+    # 加入平移尺缩旋转之后的位置
     @property
     def get_scene_xyz(self):
         theta = torch.tensor(self.ori, dtype=torch.float, device="cuda") * (np.pi / 180)
@@ -248,10 +260,12 @@ class GaussianModel:
     def get_opacity(self):
         return self.opacity_activation(self._opacity)
     
+    # 增加当前活动的球谐度 (?)
     def oneupSHdegree(self):
         if self.active_sh_degree < self.max_sh_degree:
             self.active_sh_degree += 1
     
+    # 計算当前协方差矩阵
     def get_covariance(self, scaling_modifier = 1.0):
         return self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
 
@@ -259,6 +273,7 @@ class GaussianModel:
         if self.active_sh_degree < self.max_sh_degree:
             self.active_sh_degree += 1
 
+    # 从给定点云数据创建高斯模型
     def create_from_pcd(self, pcd : BasicPointCloud, spatial_lr_scale : float = 1, floor : bool = False):
         self.spatial_lr_scale = spatial_lr_scale
         fused_point_cloud = torch.tensor(np.asarray(pcd.points)).float().cuda()
@@ -279,6 +294,7 @@ class GaussianModel:
         else:
             opacities = inverse_sigmoid(0.1 * torch.ones((fused_point_cloud.shape[0], 1), dtype=torch.float, device="cuda"))
 
+        # 允许梯度回传
         if floor:
             self._xyz = nn.Parameter(fused_point_cloud).requires_grad_(False)
         else:
@@ -295,9 +311,11 @@ class GaussianModel:
 
     def training_setup(self, training_args):
         # self.percent_dense = training_args.percent_dense
+        # 用于存储每个点的梯度累积和分母
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
+        # 设置学习率的列表 TODO:特别注意xyz的学习率设置方式
         l = [
             {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "xyz"},
             {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
@@ -316,6 +334,7 @@ class GaussianModel:
                                                     lr_delay_mult=training_args.position_lr_delay_mult,
                                                     max_steps=training_args.position_lr_max_steps)
     
+    # 重置球谐特征
     def reset_sh(self):
         if self.color:
             rgb = np.array(self.color) / 255
@@ -329,6 +348,7 @@ class GaussianModel:
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
 
+    # 于在每个训练迭代步骤更新学习率
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
         lr = self.xyz_scheduler_args(iteration)
@@ -342,6 +362,7 @@ class GaussianModel:
         #         if param_group["name"] == "xyz" or param_group["name"] == "opacity":
         #             param_group['lr'] = 0.0
 
+    # 构建属性列表
     def construct_list_of_attributes(self):
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
         # All channels except the 3 DC
@@ -356,6 +377,7 @@ class GaussianModel:
             l.append('rot_{}'.format(i))
         return l
 
+    # 保存模型
     def save_ply(self, path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
@@ -375,11 +397,13 @@ class GaussianModel:
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
 
+    # 重置透明度
     def reset_opacity(self):
         opacities_new = inverse_sigmoid(torch.min(self.get_opacity, torch.ones_like(self.get_opacity)*0.01))
         optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
         self._opacity = optimizable_tensors["opacity"]
 
+    # 加载模型ckpt
     def load_ply(self, path):
         plydata = PlyData.read(path)
 
@@ -421,6 +445,7 @@ class GaussianModel:
         self._rotation = nn.Parameter(torch.tensor(rots, dtype=torch.float, device="cuda").requires_grad_(True))
         self.active_sh_degree = self.max_sh_degree
 
+    # 将一个新的张量替换到优化器中，同时保留与该张量相关的优化状态
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
@@ -585,7 +610,9 @@ class GaussianModel:
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
 
+# 透视投影矩阵
 def getProjectionMatrix(znear, zfar, fovX, fovY):
+    # 计算切线
     tanHalfFovY = math.tan((fovY / 2))
     tanHalfFovX = math.tan((fovX / 2))
 
@@ -600,10 +627,12 @@ def getProjectionMatrix(znear, zfar, fovX, fovY):
     P[2, 3] = -(zfar * znear) / (zfar - znear)
     return P
 
+# 摄像机模型，用于在 3D 空间中进行渲染
 class MiniCam:
     def __init__(self, c2w, width, height, fovy, fovx, znear, zfar):
         # c2w (pose) should be in NeRF convention.
 
+        # 参数
         self.image_width = width
         self.image_height = height
         self.FoVy = fovy
@@ -611,12 +640,14 @@ class MiniCam:
         self.znear = znear
         self.zfar = zfar
 
+        # 世界到相机的变换矩阵
         w2c = np.linalg.inv(c2w)
 
         # rectify...
         w2c[1:3, :3] *= -1
         w2c[:3, 3] *= -1
 
+        # 计算投影矩阵
         self.world_view_transform = torch.tensor(w2c).transpose(0, 1).cuda()
         self.projection_matrix = (
             getProjectionMatrix(
@@ -626,8 +657,9 @@ class MiniCam:
             .cuda()
         )
         self.full_proj_transform = self.world_view_transform @ self.projection_matrix
-        self.camera_center = -torch.tensor(c2w[:3, 3]).cuda()
+        self.camera_center = -torch.tensor(c2w[:3, 3]).cuda()  # 相机中心
 
+# 渲染场景
 class Renderer:
     def __init__(self, sh_degree=3, white_background=True, radius=1, centers=None, edges=None, floor=False):
         
@@ -794,7 +826,7 @@ class Renderer:
             rotations=rotations,
             cov3D_precomp=cov3D_precomp,
         )
-
+        # 将渲染图像的值裁剪到 [0, 1] 范围内，确保图像有效
         rendered_image = rendered_image.clamp(0, 1)
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
