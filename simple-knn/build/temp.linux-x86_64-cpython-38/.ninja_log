@@ -1,0 +1,4 @@
+# ninja log v5
+5	10137	1724652638836474947	/network_space/server129/qinyiming/GALA3D-main/simple-knn/build/temp.linux-x86_64-cpython-38/simple_knn.o	dd2df1e589c45830
+4	21895	1724652650580866764	/network_space/server129/qinyiming/GALA3D-main/simple-knn/build/temp.linux-x86_64-cpython-38/ext.o	93c028a0d7f9a3
+6	51830	1724652680489864576	/network_space/server129/qinyiming/GALA3D-main/simple-knn/build/temp.linux-x86_64-cpython-38/spatial.o	9c8c87167b196c7
