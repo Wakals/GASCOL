@@ -6,6 +6,8 @@ from plyfile import PlyData, PlyElement
 from adan import Adan
 from scipy.stats import norm
 
+from PIL import Image
+
 import torch
 from torch import nn
 
@@ -16,6 +18,8 @@ from diff_gaussian_rasterization import (
 from simple_knn._C import distCUDA2
 
 from sh_utils import eval_sh, SH2RGB, RGB2SH
+
+softmax = nn.Softmax(dim=1)
 
 # 定义了四元数乘积
 def quaternion_multiply(q, p):
@@ -162,6 +166,7 @@ class GaussianModel:
         self._xyz = torch.empty(0)
         self._features_dc = torch.empty(0)    # 颜色
         self._features_rest = torch.empty(0)     # 啥也没有
+        self._segment_p = torch.empty(0)  # 3D Segmentation probability
         self._scaling = torch.empty(0)
         self._rotation = torch.empty(0)
         self._opacity = torch.empty(0)
@@ -181,10 +186,26 @@ class GaussianModel:
         self.ori = 0
         self.setup_functions()
 
+        self.fix_xyz = torch.empty(0)
+        self.other_xyz = torch.empty(0)
+        self.fix_features_dc = torch.empty(0)
+        self.other_features_dc = torch.empty(0)
+        self.fix_features_rest = torch.empty(0)
+        self.other_features_rest = torch.empty(0)
+        self.fix_segment_p = torch.empty(0)
+        self.other_segment_p = torch.empty(0)
+        self.fix_scaling = torch.empty(0)
+        self.other_scaling = torch.empty(0)
+        self.fix_rotation = torch.empty(0)
+        self.other_rotation = torch.empty(0)
+        self.fix_opacity = torch.empty(0)
+        self.other_opacity = torch.empty(0)
+
     def capture(self):
         return (
             self.active_sh_degree,
             self._xyz,
+            self._segment_p,
             self._features_dc,
             self._features_rest,
             self._scaling,
@@ -200,6 +221,7 @@ class GaussianModel:
     def restore(self, model_args, training_args):
         (self.active_sh_degree, 
         self._xyz, 
+        self._segment_p,
         self._features_dc, 
         self._features_rest,
         self._scaling, 
@@ -238,6 +260,11 @@ class GaussianModel:
     @property
     def get_xyz(self):
         return self._xyz
+    
+    @property
+    def get_segment_p(self):
+        return softmax(self._segment_p)
+        # return self._segment_p
     
     # 加入平移尺缩旋转之后的位置
     @property
@@ -299,6 +326,7 @@ class GaussianModel:
             self._xyz = nn.Parameter(fused_point_cloud).requires_grad_(False)
         else:
             self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
+        self._segment_p = nn.Parameter(torch.zeros((fused_point_cloud.shape[0], 2), dtype=torch.float, device="cuda")).requires_grad_(True)
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
@@ -309,26 +337,58 @@ class GaussianModel:
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
 
-    def training_setup(self, training_args):
+    def training_setup(self, training_args, stage=1):
         # self.percent_dense = training_args.percent_dense
         # 用于存储每个点的梯度累积和分母
         self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
         self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
 
-        # 设置学习率的列表 TODO:特别注意xyz的学习率设置方式
-        l = [
-            {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "xyz"},
-            {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-            {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
-            {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-            {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-            {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
-            {'params': [self.object_center], 'lr': 0.00001, "name": "center"},
-            {'params': [self.scale_factor], 'lr': 0.0000025, "name": "scale_factor"},
-        ]
+        # 设置学习率的列表, 特别注意xyz的学习率设置方式
+        if stage == 1:
+            l = [
+                {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "xyz"},
+                {'params': [self._segment_p], 'lr': 0.001, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+                {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+                {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+                {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+                {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"},
+                {'params': [self.object_center], 'lr': 0.00001, "name": "center"},
+                {'params': [self.scale_factor], 'lr': 0.0000025, "name": "scale_factor"},
+            ]
+        elif stage == 2:
+            l = [
+                {'params': [self._xyz], 'lr': 0.0, "name": "xyz"},
+                {'params': [self._segment_p], 'lr': 0.0015, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self._features_dc], 'lr': 0.0, "name": "f_dc"},
+                {'params': [self._features_rest], 'lr': 0.0, "name": "f_rest"},
+                {'params': [self._opacity], 'lr': 0.0, "name": "opacity"},
+                {'params': [self._scaling], 'lr': 0.0, "name": "scaling"},
+                {'params': [self._rotation], 'lr': 0.0, "name": "rotation"},
+                {'params': [self.object_center], 'lr': 0.0, "name": "center"},
+                {'params': [self.scale_factor], 'lr': 0.0, "name": "scale_factor"},
+            ]
+        elif stage == 3:
+            l = [
+                {'params': [self.object_center], 'lr': 0.00001, "name": "center"},
+                {'params': [self.scale_factor], 'lr': 0.0000025, "name": "scale_factor"},
+                {'params': [self.other_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "other_xyz"},
+                {'params': [self.other_segment_p], 'lr': 0.001, "name": "other_segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self.other_features_dc], 'lr': training_args.feature_lr, "name": "other_f_dc"},
+                {'params': [self.other_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "other_f_rest"},
+                {'params': [self.other_opacity], 'lr': training_args.opacity_lr, "name": "other_opacity"},
+                {'params': [self.other_scaling], 'lr': training_args.scaling_lr, "name": "other_scaling"},
+                {'params': [self.other_rotation], 'lr': training_args.rotation_lr, "name": "other_rotation"},
+            ]
+        else:
+            raise ValueError("Invalid stage number")
 
         # self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
         self.optimizer = Adan(l, lr=0.0, eps=1e-15)
+        for param_group in self.optimizer.param_groups:
+            for param in param_group['params']:
+                if param is self.other_features_dc:
+                    print(f'\033[1;32;40m[INFO] other_features_dc correctly added to optimizer.\033[0m')
         self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge),
                                                     lr_final=training_args.position_lr_final * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge),
                                                     lr_delay_mult=training_args.position_lr_delay_mult,
@@ -347,13 +407,17 @@ class GaussianModel:
         features[:, 3:, 1:] = 0.0
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
+        self._segment_p = nn.Parameter(torch.zeros((self._features_dc.shape[0], 2), dtype=torch.float, device="cuda") * 0.5).requires_grad_(True)
+        print(f'In reset_sh the shape of segment_p is {self._segment_p.shape}')
 
-    # 于在每个训练迭代步骤更新学习率
+    # 在每个训练迭代步骤更新学习率
     def update_learning_rate(self, iteration):
         ''' Learning rate scheduling per step '''
         lr = self.xyz_scheduler_args(iteration)
         for param_group in self.optimizer.param_groups:
             if param_group["name"] == "xyz":
+                param_group['lr'] = lr
+            elif param_group["name"] == "other_xyz":
                 param_group['lr'] = lr
         #     if param_group["name"] == "f_dc" or param_group["name"] == "f_rest":
         #         param_group['lr'] = lr * 10
@@ -366,6 +430,8 @@ class GaussianModel:
     def construct_list_of_attributes(self):
         l = ['x', 'y', 'z', 'nx', 'ny', 'nz']
         # All channels except the 3 DC
+        for i in range(self._segment_p.shape[1]):
+            l.append('segment_p_{}'.format(i))
         for i in range(self._features_dc.shape[1]*self._features_dc.shape[2]):
             l.append('f_dc_{}'.format(i))
         for i in range(self._features_rest.shape[1]*self._features_rest.shape[2]):
@@ -383,6 +449,7 @@ class GaussianModel:
 
         xyz = self._xyz.detach().cpu().numpy()
         normals = np.zeros_like(xyz)
+        segment_p = self._segment_p.detach().cpu().numpy()
         f_dc = self._features_dc.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
         f_rest = self._features_rest.detach().transpose(1, 2).flatten(start_dim=1).contiguous().cpu().numpy()
         opacities = self._opacity.detach().cpu().numpy()
@@ -392,7 +459,7 @@ class GaussianModel:
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(xyz.shape[0], dtype=dtype_full)
-        attributes = np.concatenate((xyz, normals, f_dc, f_rest, opacities, scale, rotation), axis=1)
+        attributes = np.concatenate((xyz, normals, segment_p, f_dc, f_rest, opacities, scale, rotation), axis=1)
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
@@ -413,6 +480,10 @@ class GaussianModel:
         opacities = np.asarray(plydata.elements[0]["opacity"])[..., np.newaxis]
 
         print("Number of points at loading : ", xyz.shape[0])
+
+        segment_p = np.zeros((xyz.shape[0], 2))
+        segment_p[:, 0] = np.asarray(plydata.elements[0]["segment_p_0"])
+        segment_p[:, 1] = np.asarray(plydata.elements[0]["segment_p_1"])
 
         features_dc = np.zeros((xyz.shape[0], 3, 1))
         features_dc[:, 0, 0] = np.asarray(plydata.elements[0]["f_dc_0"])
@@ -438,6 +509,7 @@ class GaussianModel:
             rots[:, idx] = np.asarray(plydata.elements[0][attr_name])
 
         self._xyz = nn.Parameter(torch.tensor(xyz, dtype=torch.float, device="cuda").requires_grad_(True))
+        self._segment_p = nn.Parameter(torch.tensor(segment_p, dtype=torch.float, device="cuda").requires_grad_(True))
         self._features_dc = nn.Parameter(torch.tensor(features_dc, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(torch.tensor(features_extra, dtype=torch.float, device="cuda").transpose(1, 2).contiguous().requires_grad_(True))
         self._opacity = nn.Parameter(torch.tensor(opacities, dtype=torch.float, device="cuda").requires_grad_(True))
@@ -485,6 +557,8 @@ class GaussianModel:
 
         self._xyz = optimizable_tensors["xyz"]
         self._features_dc = optimizable_tensors["f_dc"]
+        # red warning to tell it is here
+        print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         self._features_rest = optimizable_tensors["f_rest"]
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
@@ -528,6 +602,7 @@ class GaussianModel:
         optimizable_tensors = self.cat_tensors_to_optimizer(d)
         self._xyz = optimizable_tensors["xyz"]
         self._features_dc = optimizable_tensors["f_dc"]
+        print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         self._features_rest = optimizable_tensors["f_rest"]
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
@@ -555,6 +630,7 @@ class GaussianModel:
         new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
         new_rotation = self._rotation[selected_pts_mask].repeat(N,1)
         new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
+        print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
         new_opacity = self._opacity[selected_pts_mask].repeat(N,1)
 
@@ -572,6 +648,7 @@ class GaussianModel:
         
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]
+        print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         new_features_rest = self._features_rest[selected_pts_mask]
         new_opacities = self._opacity[selected_pts_mask]
         new_scaling = self._scaling[selected_pts_mask]
@@ -682,6 +759,8 @@ class Renderer:
     
     def initialize(self, input=None, num_pts=100000):
         if input is None:
+            # red print to tell input is None
+            # print(f"\033[1;31;40m[INFO] input is None\033[0m")
             # init from random point cloud
             for i, chi in enumerate(self.gaussians.child):
                 # x = np.random.random((num_pts,)) * chi.object_edge[0] * 0.8 - chi.object_edge[0] * 0.4
@@ -726,11 +805,15 @@ class Renderer:
                 )
                 self.gaussians.floor.create_from_pcd(pcd, 10, floor=True)
         elif isinstance(input, BasicPointCloud):
+            # print(f"\033[1;31;40m[INFO] input is BasicPointCloud\033[0m")
             # load from a provided pcd
             self.gaussians.create_from_pcd(input, 1)
         else:
+            # print(f"\033[1;31;40m[INFO] input is not None\033[0m")
             # load from saved ply
             self.gaussians.load_ply(input)
+
+        # raise ValueError('stop here')
 
     def render(
         self,
@@ -782,6 +865,10 @@ class Renderer:
         means2D = screenspace_points
         opacity = gs_model.get_opacity
 
+        segment_p = gs_model.get_segment_p
+
+        # print(f'the shape of segment_p in gs_model is {segment_p.shape}')
+
         # If precomputed 3d covariance is provided, use it. If not, then it will be computed from
         # scaling / rotation by the rasterizer.
         scales = None
@@ -815,8 +902,15 @@ class Renderer:
         else:
             colors_precomp = override_color
 
+        # print(f'the shape of shs is {shs.shape}')
+        if colors_precomp is not None:
+            print(f'the shape of color precomp is {colors_precomp.shape}')
+        # raise ValueError('stop here')
         # Rasterize visible Gaussians to image, obtain their radii (on screen).
-        rendered_image, radii, rendered_depth, rendered_alpha = rasterizer(
+        # segment_p = torch.cat((segment_p, torch.zeros((segment_p.shape[0], 1), device=segment_p.device)), dim=1)
+        # segment_p = segment_p.unsqueeze(1)
+        # print(f'the shape of segment_p is {segment_p.shape}')
+        rendered_image, radii, rendered_depth, rendered_alpha, rendered_segment = rasterizer(
             means3D=means3D,
             means2D=means2D,
             shs=shs,
@@ -825,8 +919,23 @@ class Renderer:
             scales=scales,
             rotations=rotations,
             cov3D_precomp=cov3D_precomp,
+            segment_p=segment_p,
         )
+
+        # print(f'the max of segment_p is {torch.max(segment_p)}')
+        # print(f'the min of segment_p is {torch.min(segment_p)}')
+        
+        # save rendered_segment as gray image
+        # print(f'the shape of rendered_segment is {rendered_segment.shape}') # [2, 256, 256]
+        # rendered_segment = rendered_segment.cpu().detach().numpy()
+        # rendered_segment = rendered_segment[0] * 255
+        # rendered_segment = rendered_segment.astype(np.uint8)
+        # rendered_segment = Image.fromarray(rendered_segment)
+        # rendered_segment.save('rendered_segment.png')
+        # raise ValueError('stop here')
+
         # 将渲染图像的值裁剪到 [0, 1] 范围内，确保图像有效
+        
         rendered_image = rendered_image.clamp(0, 1)
 
         # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
@@ -838,4 +947,5 @@ class Renderer:
             "viewspace_points": screenspace_points,
             "visibility_filter": radii > 0,
             "radii": radii,
+            "segment": rendered_segment,
         }

@@ -1,4 +1,5 @@
 import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 import cv2
 import time
 import tqdm
@@ -8,6 +9,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torchvision import transforms
 
 import rembg
 
@@ -18,6 +20,10 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import glob
 import re
+
+from lang_sam import LangSAM
+
+# SAM_model = LangSAM()
 
 def _tensor_size(t):
     return t.size()[1]*t.size()[2]*t.size()[3]
@@ -89,10 +95,14 @@ class GUI:
         if self.opt.load_object is not None:
             for i in range(len(self.opt.load_object)):
                 self.renderer.gaussians.child[i].load_ply(self.opt.load_object[i])
-            self.renderer.gaussians.floor.load_ply(self.opt.load_floor)            
+            self.renderer.gaussians.floor.load_ply(self.opt.load_floor)  
+            # color print
+            print(f"\033[1;32;40m[INFO] load object from ckpt.\033[0m")
         else:
             # initialize gaussians
             self.renderer.initialize(num_pts=self.opt.num_pts)
+            # color print
+            print(f"\033[1;32;40m[INFO] initialize objects.\033[0m")
 
     def seed_everything(self):
         try:
@@ -109,12 +119,20 @@ class GUI:
 
         self.last_seed = seed
 
-    def prepare_train(self):
+    def prepare_train(self, train_stage=1):
+
+        # self.renderer.gaussians._xyz = torch.empty(0)
+        # self.renderer.gaussians._segment_p = torch.empty(0)
+        # self.renderer.gaussians._features_dc = torch.empty(0)
+        # self.renderer.gaussians._features_rest = torch.empty(0)
+        # self.renderer.gaussians._scaling = torch.empty(0)
+        # self.renderer.gaussians._rotation = torch.empty(0)
+        # self.renderer.gaussians._opacity = torch.empty(0)
 
         self.step = 0
 
         # setup training
-        self.renderer.gaussians.training_setup(self.opt)
+        self.renderer.gaussians.training_setup(self.opt, stage=train_stage)
         for chi in self.renderer.gaussians.child:
             chi.training_setup(self.opt)
             chi.active_sh_degree = 0
@@ -185,6 +203,11 @@ class GUI:
             # update lr
             for chi in self.renderer.gaussians.child:
                 chi.update_learning_rate(self.step)
+
+            # for chi in self.renderer.gaussians.child:
+            #     chi.other_feature_dc.register_hook(print_grad)
+
+            # raise ValueError('stop')
 
             for i in range(len(self.opt.prompt)):
                 loss = 0
@@ -267,6 +290,7 @@ class GUI:
 
             if self.opt.floor:
                 self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._xyz], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._segment_p], dim=0)
                 self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_dc], dim=0)
                 self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_rest], dim=0)
                 self.renderer.gaussians._scaling = torch.cat([chi._scaling for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._scaling], dim=0)
@@ -274,6 +298,7 @@ class GUI:
                 self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._opacity], dim=0)
             else:
                 self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._scaling = torch.cat([chi.get_scene_scaling for chi in self.renderer.gaussians.child], dim=0)
@@ -306,10 +331,6 @@ class GUI:
                     # print(scale)
                     # raise ValueError('stop')
                     point = sample_point_in_cube(self.renderer.gaussians.child[i].object_edge)
-                    # print(f'the point is {point}')
-                    # print(f'the shape of point is {point.shape}')
-                    # print(f'the shape of xyz is {xyz.shape}')
-                    # print(f'the shape of scale is {scale.shape}')
                     distance_to_point = torch.sum(((point - xyz) * normalize_factor)**2, dim=1, keepdim=True)
                     # print(f'the shape of distance_to_point is {distance_to_point.shape}')
                     # raise ValueError('stop')
@@ -462,7 +483,7 @@ class GUI:
     # no gui mode
     def train(self, iters=12000):
         if iters > 0:
-            self.prepare_train()
+            self.prepare_train(train_stage=1)
             for i in tqdm.trange(iters):
                 self.train_step()
 
@@ -472,6 +493,7 @@ class GUI:
             torch.cuda.empty_cache()
             if self.opt.floor:
                 self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._xyz], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._segment_p], dim=0)
                 self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_dc], dim=0)
                 self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_rest], dim=0)
                 self.renderer.gaussians._scaling = torch.cat([chi._scaling for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._scaling], dim=0)
@@ -479,6 +501,7 @@ class GUI:
                 self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._opacity], dim=0)
             else:
                 self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._scaling = torch.cat([chi.get_scene_scaling for chi in self.renderer.gaussians.child], dim=0)
@@ -491,6 +514,231 @@ class GUI:
 
             for chi in self.renderer.gaussians.child:
                 print(f'{chi.prompt} center: {chi.object_center}, scale_factor: {chi.scale_factor}')
+
+    def train_seg_step(self, SAM_model):
+        
+        starter = torch.cuda.Event(enable_timing=True)
+        ender = torch.cuda.Event(enable_timing=True)
+        starter.record()
+
+        for _ in range(self.train_steps):
+            self.seg_step += 1
+
+            render_resolution = 256
+            # avoid too large elevation
+            min_ver = -45
+            max_ver = 30
+            
+            # update lr
+            for chi in self.renderer.gaussians.child:
+                chi.update_learning_rate(self.step)
+
+            for i in range(len(self.opt.prompt)):
+                loss = 0.0
+
+                ### novel view (manual batch)
+                vers, hors, radii = [], [], []
+
+                # render random view
+                ver = np.random.randint(min_ver, max_ver)
+                hor = np.random.randint(-180, 180)
+                radius = 0
+
+                vers.append(ver)
+                hors.append(hor)
+                radii.append(radius)
+
+                # set proper camera
+                pose = orbit_camera(self.opt.elevation + ver, hor,
+                                    np.linalg.norm(np.array(self.renderer.gaussians.child[i].object_edge)) * 1.5)
+
+                cur_cam = MiniCam(pose, render_resolution, render_resolution, self.cam.fovy, self.cam.fovx, self.cam.near, self.cam.far)
+
+                bg_color = torch.tensor([1, 1, 1] if np.random.rand() > self.opt.invert_bg_prob else [0, 0, 0], dtype=torch.float32, device="cuda")
+                out = self.renderer.render(cur_cam, bg_color=bg_color, gs_model=self.renderer.gaussians.child[i])
+
+                segment_image = out["segment"] # [2, H, W]
+                # use softmax to get the probability
+                print(f'the max of segment_image is {segment_image.max()}')
+                print(f'the min of segment_image is {segment_image.min()}')
+                # save segment_image
+                # segment_image = softmax(segment_image)
+                if self.seg_step % 100 == 0:
+                    s_img = segment_image.detach().cpu().numpy()
+                    s_img = s_img[0]
+                    s_img = s_img * 255
+                    s_img = s_img.astype(np.uint8)
+                    s_img = Image.fromarray(s_img)
+                    s_img.save(f'./segment_image/{self.opt.save_path}_{i}_segment_image.png')
+                # raise ValueError('stop')
+                image = out["image"] # [3, H, W]
+
+                img = image.detach().cpu().clone().permute(1, 2, 0)
+                img = (img * 255).clamp(0, 255).byte()
+                np_array = img.numpy()
+                image_pil = Image.fromarray(np_array)
+
+                text_prompt = "trousers"
+
+                masks, _, _, _ = SAM_model.predict(image_pil, text_prompt)
+                mask = masks.sum(0)
+
+                if mask.dim() == 0:
+                    print('got no mask')
+                    continue
+
+                # print(f'the max of mask is {mask.max()}')
+                # print(f'the min of mask is {mask.min()}')
+
+                
+                # connvert segment_image type to float
+                mask = mask.float().to(self.device)
+
+                # mask >= 0 and mask <= 1
+                mask = mask.clamp(0, 1)
+                
+
+                if self.seg_step % 100 == 0:
+                    msk = mask.detach().cpu().numpy()
+                    msk = msk * 255
+                    msk = msk.astype(np.uint8)
+                    msk = Image.fromarray(msk)
+                    msk.save(f'./mask_image/{self.opt.save_path}_{i}_mask.png')
+
+                seg_loss = F.binary_cross_entropy(segment_image[0], mask)
+
+                seg_loss.backward()
+
+            # optimizing
+            for chi in self.renderer.gaussians.child:
+                chi.optimizer.step()
+                chi.optimizer.zero_grad()
+            if self.opt.floor:
+                self.renderer.gaussians.floor.optimizer.step()
+                self.renderer.gaussians.floor.optimizer.zero_grad()
+
+            # raise ValueError('stop')
+
+        ender.record()
+        torch.cuda.synchronize()
+        t = starter.elapsed_time(ender)
+
+
+    def train_seg(self, iters=10):
+        SAM_model = LangSAM()
+        self.seg_step = 0
+        if iters > 0:
+            self.prepare_train(train_stage=2)
+
+            for i in tqdm.trange(iters):
+                self.train_seg_step(SAM_model)
+
+            torch.cuda.empty_cache()
+            if self.opt.floor:
+                self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._xyz], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._segment_p], dim=0)
+                self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_dc], dim=0)
+                self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_rest], dim=0)
+                self.renderer.gaussians._scaling = torch.cat([chi._scaling for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._scaling], dim=0)
+                self.renderer.gaussians._rotation = torch.cat([chi.get_scene_rotation for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._rotation], dim=0)
+                self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._opacity], dim=0)
+            else:
+                self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._scaling = torch.cat([chi.get_scene_scaling for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._rotation = torch.cat([chi.get_scene_rotation for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child], dim=0)
+
+            # save
+            self.save_snapshot(0)
+            self.save_model()
+
+
+    def render_seg_scene(self, iters=10):
+        self.prepare_train(train_stage=3)
+
+        idxs = []
+        fix_idxs = []
+
+        for chi in self.renderer.gaussians.child:
+            idx = [i for i in range(chi._segment_p.shape[0]) if chi.get_segment_p[i][0] > 0.5]
+            fix_idx = [i for i in range(chi._segment_p.shape[0]) if chi.get_segment_p[i][0] <= 0.5]
+            idxs.append(idx)
+            fix_idxs.append(fix_idx)
+            print(f'the length of idx is {len(idx)}')
+            print(f'the length of fix_idx is {len(fix_idx)}')
+
+        for chi, idx, fix_idx in zip(self.renderer.gaussians.child, idxs, fix_idxs):
+            chi.other_xyz = chi._xyz[idx].clone().detach().requires_grad_(True)
+            chi.other_segment_p = chi._segment_p[idx].clone().detach().requires_grad_(True)
+            chi.other_features_dc = chi._features_dc[idx].clone().detach().requires_grad_(True)
+            chi.other_features_rest = chi._features_rest[idx].clone().detach().requires_grad_(True)
+            chi.other_scaling = chi._scaling[idx].clone().detach().requires_grad_(True)
+            chi.other_rotation = chi._rotation[idx].clone().detach().requires_grad_(True)
+            chi.other_opacity = chi._opacity[idx].clone().detach().requires_grad_(True)
+            chi.fix_xyz = chi._xyz[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_segment_p = chi._segment_p[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_features_dc = chi._features_dc[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_features_rest = chi._features_rest[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_scaling = chi._scaling[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_rotation = chi._rotation[fix_idx].clone().detach().requires_grad_(False)
+            chi.fix_opacity = chi._opacity[fix_idx].clone().detach().requires_grad_(False)
+
+        for chi in self.renderer.gaussians.child:
+            chi._xyz = torch.cat([chi.other_xyz, chi.fix_xyz], dim=0)
+            chi._segment_p = torch.cat([chi.other_segment_p, chi.fix_segment_p], dim=0)
+            chi._features_dc = torch.cat([chi.other_features_dc, chi.fix_features_dc], dim=0)
+            chi._features_rest = torch.cat([chi.other_features_rest, chi.fix_features_rest], dim=0)
+            chi._scaling = torch.cat([chi.other_scaling, chi.fix_scaling], dim=0)
+            chi._rotation = torch.cat([chi.other_rotation, chi.fix_rotation], dim=0)
+            chi._opacity = torch.cat([chi.other_opacity, chi.fix_opacity], dim=0)
+
+        self.renderer.gaussians.training_setup(self.opt, stage=3)
+        for chi in self.renderer.gaussians.child:
+            chi.training_setup(self.opt)
+        if iters > 0:
+            for i in tqdm.trange(iters):
+                self.train_step()
+
+                for chi in self.renderer.gaussians.child:
+                    chi._xyz = torch.cat([chi.other_xyz, chi.fix_xyz], dim=0)
+                    chi._segment_p = torch.cat([chi.other_segment_p, chi.fix_segment_p], dim=0)
+                    chi._features_dc = torch.cat([chi.other_features_dc, chi.fix_features_dc], dim=0)
+                    chi._features_rest = torch.cat([chi.other_features_rest, chi.fix_features_rest], dim=0)
+                    chi._scaling = torch.cat([chi.other_scaling, chi.fix_scaling], dim=0)
+                    chi._rotation = torch.cat([chi.other_rotation, chi.fix_rotation], dim=0)
+                    chi._opacity = torch.cat([chi.other_opacity, chi.fix_opacity], dim=0)
+
+                if (i + 1) % 500 == 0 or i == 0:
+                    self.save_snapshot(i + 1)
+
+            torch.cuda.empty_cache()
+            if self.opt.floor:
+                self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._xyz], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._segment_p], dim=0)
+                self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_dc], dim=0)
+                self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._features_rest], dim=0)
+                self.renderer.gaussians._scaling = torch.cat([chi._scaling for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._scaling], dim=0)
+                self.renderer.gaussians._rotation = torch.cat([chi.get_scene_rotation for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._rotation], dim=0)
+                self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child]+ [self.renderer.gaussians.floor._opacity], dim=0)
+            else:
+                self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._segment_p = torch.cat([chi._segment_p for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._features_dc = torch.cat([chi._features_dc for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._features_rest = torch.cat([chi._features_rest for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._scaling = torch.cat([chi.get_scene_scaling for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._rotation = torch.cat([chi.get_scene_rotation for chi in self.renderer.gaussians.child], dim=0)
+                self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child], dim=0)
+            
+            # save
+            self.save_snapshot(0)
+            self.save_model()
+
+            for chi in self.renderer.gaussians.child:
+                print(f'{chi.prompt} center: {chi.object_center}, scale_factor: {chi.scale_factor}')
+
 
 if __name__ == "__main__":
     import argparse
@@ -505,4 +753,6 @@ if __name__ == "__main__":
 
     gui = GUI(opt)
     gui.train(opt.iters)
+    # gui.train_seg()
+    # gui.render_seg_scene()
     
