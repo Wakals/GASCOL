@@ -41,6 +41,7 @@ def get_expon_lr_func(
 ):
     
     def helper(step):
+        # print(f'in the func step is {step}')
         if lr_init == lr_final:
             # constant lr, ignore other params
             return lr_init
@@ -175,7 +176,9 @@ class GaussianModel:
         self.denom = torch.empty(0)
         self.optimizer = None
         self.percent_dense = 0
-        self.spatial_lr_scale = 0
+        self.label = None
+        self.spatial_lr_scale = 2.0
+        self.color_lr_scale = 1.0
         self.child = []
         self.object_center = nn.Parameter(torch.tensor(np.asarray(center)).float().cuda().requires_grad_(True))
         self.scale_factor = nn.Parameter(torch.tensor(1).float().cuda().requires_grad_(True))
@@ -200,6 +203,23 @@ class GaussianModel:
         self.other_rotation = torch.empty(0)
         self.fix_opacity = torch.empty(0)
         self.other_opacity = torch.empty(0)
+
+    def create_child_from_other(self, parent_gm):
+        self._xyz = parent_gm.other_xyz
+        self._features_dc = parent_gm.other_features_dc
+        self._features_rest = parent_gm.other_features_rest
+        self._segment_p = parent_gm.other_segment_p
+        self._scaling = parent_gm.other_scaling
+        self._rotation = parent_gm.other_rotation
+        self._opacity = parent_gm.other_opacity
+        self.active_sh_degree = parent_gm.active_sh_degree
+        self.max_sh_degree = parent_gm.max_sh_degree
+        self.max_radii2D = parent_gm.max_radii2D
+        self.xyz_gradient_accum = parent_gm.xyz_gradient_accum
+        self.spatial_lr_scale = parent_gm.spatial_lr_scale
+        self.scale_factor = parent_gm.scale_factor
+        self.floor = parent_gm.floor
+        self.ori = parent_gm.ori
 
     def capture(self):
         return (
@@ -278,6 +298,26 @@ class GaussianModel:
         return torch.mm(self._xyz, rotation_matrix.t()) * self.scale_factor + self.object_center
 
     @property
+    def get_scene_other_xyz(self):
+        theta = torch.tensor(self.ori, dtype=torch.float, device="cuda") * (np.pi / 180)
+        rotation_matrix = torch.tensor([
+            [torch.cos(theta), 0, torch.sin(theta)],
+            [0, 1, 0],
+            [-torch.sin(theta), 0, torch.cos(theta)]
+        ], dtype=torch.float, device="cuda")
+        return torch.mm(self.other_xyz, rotation_matrix.t()) * self.scale_factor + self.object_center
+
+    @property
+    def get_scene_fix_xyz(self):
+        theta = torch.tensor(self.ori, dtype=torch.float, device="cuda") * (np.pi / 180)
+        rotation_matrix = torch.tensor([
+            [torch.cos(theta), 0, torch.sin(theta)],
+            [0, 1, 0],
+            [-torch.sin(theta), 0, torch.cos(theta)]
+        ], dtype=torch.float, device="cuda")
+        return torch.mm(self.fix_xyz, rotation_matrix.t()) * self.scale_factor + self.object_center
+
+    @property
     def get_features(self):
         features_dc = self._features_dc
         features_rest = self._features_rest
@@ -327,6 +367,7 @@ class GaussianModel:
         else:
             self._xyz = nn.Parameter(fused_point_cloud.requires_grad_(True))
         self._segment_p = nn.Parameter(torch.zeros((fused_point_cloud.shape[0], 2), dtype=torch.float, device="cuda")).requires_grad_(True)
+        self.label = torch.zeros((fused_point_cloud.shape[0], 1), dtype=torch.bool, device="cuda")
         self._features_dc = nn.Parameter(features[:,:,0:1].transpose(1, 2).contiguous().requires_grad_(True))
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._scaling = nn.Parameter(scales.requires_grad_(True))
@@ -345,10 +386,11 @@ class GaussianModel:
 
         # 设置学习率的列表, 特别注意xyz的学习率设置方式
         if stage == 1:
+            print(f"\033[1;32;40m[INFO] I'm HERE stage 1!!!\033[0m")
             l = [
                 {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "xyz"},
-                {'params': [self._segment_p], 'lr': 0.001, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
-                {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+                {'params': [self._segment_p], 'lr': 0.05, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self._features_dc], 'lr': training_args.feature_lr * self.color_lr_scale, "name": "f_dc"},
                 {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
                 {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
                 {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
@@ -357,9 +399,10 @@ class GaussianModel:
                 {'params': [self.scale_factor], 'lr': 0.0000025, "name": "scale_factor"},
             ]
         elif stage == 2:
+            print(f"\033[1;32;40m[INFO] I'm HERE stage 2!!!\033[0m")
             l = [
                 {'params': [self._xyz], 'lr': 0.0, "name": "xyz"},
-                {'params': [self._segment_p], 'lr': 0.0015, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self._segment_p], 'lr': 0.05, "name": "segment_p"},  # set learning rate of segment_p to a fixed value
                 {'params': [self._features_dc], 'lr': 0.0, "name": "f_dc"},
                 {'params': [self._features_rest], 'lr': 0.0, "name": "f_rest"},
                 {'params': [self._opacity], 'lr': 0.0, "name": "opacity"},
@@ -369,16 +412,24 @@ class GaussianModel:
                 {'params': [self.scale_factor], 'lr': 0.0, "name": "scale_factor"},
             ]
         elif stage == 3:
+            print(f"\033[1;32;40m[INFO] I'm HERE stage 3!!!\033[0m")
             l = [
                 {'params': [self.object_center], 'lr': 0.00001, "name": "center"},
                 {'params': [self.scale_factor], 'lr': 0.0000025, "name": "scale_factor"},
                 {'params': [self.other_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge), "name": "other_xyz"},
-                {'params': [self.other_segment_p], 'lr': 0.001, "name": "other_segment_p"},  # set learning rate of segment_p to a fixed value
-                {'params': [self.other_features_dc], 'lr': training_args.feature_lr, "name": "other_f_dc"},
+                {'params': [self.other_segment_p], 'lr': 0.05, "name": "other_segment_p"},  # set learning rate of segment_p to a fixed value
+                {'params': [self.other_features_dc], 'lr': training_args.feature_lr * self.color_lr_scale, "name": "other_f_dc"},
                 {'params': [self.other_features_rest], 'lr': training_args.feature_lr / 20.0, "name": "other_f_rest"},
                 {'params': [self.other_opacity], 'lr': training_args.opacity_lr, "name": "other_opacity"},
                 {'params': [self.other_scaling], 'lr': training_args.scaling_lr, "name": "other_scaling"},
                 {'params': [self.other_rotation], 'lr': training_args.rotation_lr, "name": "other_rotation"},
+                # {'params': [self.fix_xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale * sum(self.object_edge) / len(self.object_edge) * 0.25, "name": "fix_xyz"},
+                # {'params': [self.fix_segment_p], 'lr': 0.05, "name": "fix_segment_p"},  # set learning rate of segment_p to a fixed value
+                # {'params': [self.fix_features_dc], 'lr': training_args.feature_lr * 2.0 * 0.25, "name": "fix_f_dc"},
+                # {'params': [self.fix_features_rest], 'lr': training_args.feature_lr / 20.0 * 0.25, "name": "fix_f_rest"},
+                # {'params': [self.fix_opacity], 'lr': training_args.opacity_lr * 0.25, "name": "fix_opacity"},
+                # {'params': [self.fix_scaling], 'lr': training_args.scaling_lr * 0.25, "name": "fix_scaling"},
+                # {'params': [self.fix_rotation], 'lr': training_args.rotation_lr * 0.25, "name": "fix_rotation"},
             ]
         else:
             raise ValueError("Invalid stage number")
@@ -409,6 +460,9 @@ class GaussianModel:
         self._features_rest = nn.Parameter(features[:,:,1:].transpose(1, 2).contiguous().requires_grad_(True))
         self._segment_p = nn.Parameter(torch.zeros((self._features_dc.shape[0], 2), dtype=torch.float, device="cuda") * 0.5).requires_grad_(True)
         print(f'In reset_sh the shape of segment_p is {self._segment_p.shape}')
+
+    def reset_segment_p(self):
+        self._segment_p = nn.Parameter(torch.zeros((self._segment_p.shape[0], 2), dtype=torch.float, device="cuda") * 0.5).requires_grad_(True)
 
     # 在每个训练迭代步骤更新学习率
     def update_learning_rate(self, iteration):
@@ -441,6 +495,7 @@ class GaussianModel:
             l.append('scale_{}'.format(i))
         for i in range(self._rotation.shape[1]):
             l.append('rot_{}'.format(i))
+        l.append('label')
         return l
 
     # 保存模型
@@ -455,11 +510,13 @@ class GaussianModel:
         opacities = self._opacity.detach().cpu().numpy()
         scale = self._scaling.detach().cpu().numpy()
         rotation = self._rotation.detach().cpu().numpy()
+        print(f'the shape of label is {self.label.shape}')
+        label = self.label.cpu().numpy()
 
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(xyz.shape[0], dtype=dtype_full)
-        attributes = np.concatenate((xyz, normals, segment_p, f_dc, f_rest, opacities, scale, rotation), axis=1)
+        attributes = np.concatenate((xyz, normals, segment_p, f_dc, f_rest, opacities, scale, rotation, label), axis=1)
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
         PlyData([el]).write(path)
@@ -482,8 +539,24 @@ class GaussianModel:
         print("Number of points at loading : ", xyz.shape[0])
 
         segment_p = np.zeros((xyz.shape[0], 2))
-        segment_p[:, 0] = np.asarray(plydata.elements[0]["segment_p_0"])
-        segment_p[:, 1] = np.asarray(plydata.elements[0]["segment_p_1"])
+        # 如果没有segment_p属性，就初始化为0.0
+        if "segment_p_0" not in plydata.elements[0]:
+            segment_p[:, 0] = 0.0
+            segment_p[:, 1] = 0.0
+        else:
+            segment_p[:, 0] = np.asarray(plydata.elements[0]["segment_p_0"])
+            segment_p[:, 1] = np.asarray(plydata.elements[0]["segment_p_1"])
+
+        if "label" not in plydata.elements[0]:
+            print("No label found, initializing to False!!!!!!!!!!!!!!!!!!!!")
+            self.label = torch.zeros((xyz.shape[0], 1), dtype=torch.bool, device="cuda")
+            print(f'the shape of label is {self.label.shape}')
+        else:
+            print("Label found!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            self.label = torch.tensor(np.asarray(plydata.elements[0]["label"]), dtype=torch.bool, device="cuda")
+
+        if self.label.dim() == 1:
+            self.label = self.label.unsqueeze(1)
 
         features_dc = np.zeros((xyz.shape[0], 3, 1))
         features_dc[:, 0, 0] = np.asarray(plydata.elements[0]["f_dc_0"])
@@ -563,6 +636,7 @@ class GaussianModel:
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
         self._rotation = optimizable_tensors["rotation"]
+        self._segment_p = optimizable_tensors["segment_p"]
 
         self.xyz_gradient_accum = self.xyz_gradient_accum[valid_points_mask]
 
@@ -573,6 +647,8 @@ class GaussianModel:
         optimizable_tensors = {}
         for group in self.optimizer.param_groups:
             assert len(group["params"]) == 1
+            if group["name"] not in tensors_dict:
+                continue
             extension_tensor = tensors_dict[group["name"]]
             stored_state = self.optimizer.state.get(group['params'][0], None)
             if stored_state is not None:
@@ -586,14 +662,17 @@ class GaussianModel:
 
                 optimizable_tensors[group["name"]] = group["params"][0]
             else:
+                if group["params"][0].device != extension_tensor.device:
+                    group["params"][0] = group["params"][0].to(extension_tensor.device)
                 group["params"][0] = nn.Parameter(torch.cat((group["params"][0], extension_tensor), dim=0).requires_grad_(True))
                 optimizable_tensors[group["name"]] = group["params"][0]
 
         return optimizable_tensors
 
-    def densification_postfix(self, new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation):
+    def densification_postfix(self, new_xyz, new_features_dc, new_segnent_p, new_features_rest, new_opacities, new_scaling, new_rotation):
         d = {"xyz": new_xyz,
         "f_dc": new_features_dc,
+        "segment_p": new_segnent_p,
         "f_rest": new_features_rest,
         "opacity": new_opacities,
         "scaling" : new_scaling,
@@ -602,7 +681,7 @@ class GaussianModel:
         optimizable_tensors = self.cat_tensors_to_optimizer(d)
         self._xyz = optimizable_tensors["xyz"]
         self._features_dc = optimizable_tensors["f_dc"]
-        print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
+        self._segment_p = optimizable_tensors["segment_p"]
         self._features_rest = optimizable_tensors["f_rest"]
         self._opacity = optimizable_tensors["opacity"]
         self._scaling = optimizable_tensors["scaling"]
@@ -630,11 +709,12 @@ class GaussianModel:
         new_scaling = self.scaling_inverse_activation(self.get_scaling[selected_pts_mask].repeat(N,1) / (0.8*N))
         new_rotation = self._rotation[selected_pts_mask].repeat(N,1)
         new_features_dc = self._features_dc[selected_pts_mask].repeat(N,1,1)
+        new_segment_p = self._segment_p[selected_pts_mask].repeat(N,1)
         print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         new_features_rest = self._features_rest[selected_pts_mask].repeat(N,1,1)
         new_opacity = self._opacity[selected_pts_mask].repeat(N,1)
 
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacity, new_scaling, new_rotation)
+        self.densification_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacity, new_scaling, new_rotation)
 
         prune_filter = torch.cat((selected_pts_mask, torch.zeros(N * selected_pts_mask.sum(), device="cuda", dtype=bool)))
         self.prune_points(prune_filter)
@@ -648,13 +728,14 @@ class GaussianModel:
         
         new_xyz = self._xyz[selected_pts_mask]
         new_features_dc = self._features_dc[selected_pts_mask]
+        new_segment_p = self._segment_p[selected_pts_mask]
         print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
         new_features_rest = self._features_rest[selected_pts_mask]
         new_opacities = self._opacity[selected_pts_mask]
         new_scaling = self._scaling[selected_pts_mask]
         new_rotation = self._rotation[selected_pts_mask]
 
-        self.densification_postfix(new_xyz, new_features_dc, new_features_rest, new_opacities, new_scaling, new_rotation)
+        self.densification_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacities, new_scaling, new_rotation)
 
     def densify_and_prune(self, max_grad, min_opacity, extent, max_screen_size):
         grads = self.xyz_gradient_accum / self.denom
@@ -683,9 +764,141 @@ class GaussianModel:
 
         torch.cuda.empty_cache()
 
+    def densify_chi_child(self, N=200):
+        for chi in self.child:
+            num_pts = chi.get_xyz.shape[0]
+            if N * num_pts > 50000:
+                # print('Here')
+                N = 50000 // num_pts
+            stds = chi.get_scaling.repeat(N,1)
+            # means = torch.zeros((stds.size(0), 3), device="cuda") + torch.randn((stds.size(0), 3), device="cuda") * 0.001
+            means = torch.zeros((stds.size(0), 3), device="cuda")
+            samples = torch.normal(mean=means, std=stds)
+            rots = build_rotation(chi._rotation).repeat(N,1,1)
+            new_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + chi.get_xyz.repeat(N, 1)
+            # print(f'the shape of new_xyz is {new_xyz.shape}')
+            # print(f'the min of new xyz is {torch.min(new_xyz, dim=0)}')
+            # print(f'the max of new_xyz is {torch.max(new_xyz, dim=0)}')
+            # raise ValueError('stop')
+            new_scaling = chi.scaling_inverse_activation(chi.get_scaling.repeat(N,1) / 1.6)
+            new_rotation = chi._rotation.repeat(N,1)
+            new_features_dc = chi._features_dc.repeat(N,1,1)
+            new_segment_p = chi._segment_p.repeat(N,1)
+            print(f"\033[1;32;40m[INFO] I'm HERE!!!\033[0m")
+            new_features_rest = chi._features_rest.repeat(N,1,1)
+            new_opacity = chi._opacity.repeat(N,1)
+            chi.densification_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacity, new_scaling, new_rotation)
+            self.densification_child_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacity, new_scaling, new_rotation)
+        
+        
+    def densification_child_postfix(self, new_other_xyz, new_other_features_dc, new_other_segment_p, new_other_features_rest, new_other_opacity, new_other_scaling, new_other_rotation):
+        d = {"other_xyz": new_other_xyz,
+             "other_f_dc": new_other_features_dc,
+             "other_segment_p": new_other_segment_p,
+             "other_f_rest": new_other_features_rest,
+             "other_opacity": new_other_opacity,
+             "other_scaling" : new_other_scaling,
+             "other_rotation" : new_other_rotation}
+
+        optimizable_tensors = self.cat_tensors_to_optimizer(d)
+        self.other_xyz = optimizable_tensors["other_xyz"]
+        self.other_features_dc = optimizable_tensors["other_f_dc"]
+        self.other_segment_p = optimizable_tensors["other_segment_p"]
+        self.other_features_rest = optimizable_tensors["other_f_rest"]
+        self.other_opacity = optimizable_tensors["other_opacity"]
+        self.other_scaling = optimizable_tensors["other_scaling"]
+        self.other_rotation = optimizable_tensors["other_rotation"]
+
+        self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+        self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+        self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
+
+
     def add_densification_stats(self, viewspace_point_tensor, update_filter):
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
+
+    def densify_directly(self, N=100000):
+        random_indices = torch.randperm(self.get_xyz.shape[0])[:N]
+        stds = self.get_scaling[random_indices]
+        means = torch.zeros((stds.size(0), 3), device="cuda")
+        samples = torch.normal(mean=means, std=stds)
+        rots = build_rotation(self._rotation[random_indices])
+        add_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[random_indices]
+        add_scaling = self.scaling_inverse_activation(self.get_scaling[random_indices] / 1.6)
+        add_rotation = self._rotation[random_indices]
+        add_features_dc = self._features_dc[random_indices]
+        # add_segment_p = torch.cat((torch.ones((N, 1), device="cuda") * 10.0, torch.zeros((N, 1), device="cuda")), dim=1)
+        add_segment_p = self._segment_p[random_indices]
+        add_features_rest = self._features_rest[random_indices]
+        add_opacity = self._opacity[random_indices]
+        self.densification_child_postfix(add_xyz, add_features_dc, add_segment_p, add_features_rest, add_opacity, add_scaling, add_rotation)
+        new_label = torch.ones((N, 1), dtype=torch.bool, device="cuda")
+        self.label = torch.cat((new_label, self.label), dim=0)
+
+    def densify_other(self, N=8000, bbox=None):
+        # left bottom front to right top back
+        bbox = [[-0.2, 0.0, -0.2], [0.2, 0.4, 0.2]]
+        # 再 bbox 的面上随机采样mean的值
+        N_each_face = N
+        total_N = N_each_face * 6
+        add_xyzs = []
+
+        # fix x
+        fix_xs = [bbox[0][0], bbox[1][0]]
+        scale_y = bbox[1][1] - bbox[0][1]
+        center_y = bbox[0][1]
+        scale_z = bbox[1][2] - bbox[0][2]
+        center_z = bbox[0][2]
+        for i in range(2):
+            fix_x = torch.tensor([fix_xs[i]], device="cuda").unsqueeze(1).repeat(N_each_face, 1)
+            print(f'the shape of fix_x is {fix_x.shape}')
+            random_y = torch.rand((N_each_face, 1), device="cuda") * scale_y + center_y
+            random_z = torch.rand((N_each_face, 1), device="cuda") * scale_z + center_z
+            add_xyzs.append(torch.cat((fix_x, random_y, random_z), dim=1))
+        
+        # fix y
+        fix_ys = [bbox[0][1], bbox[1][1]]
+        scale_x = bbox[1][0] - bbox[0][0]
+        center_x = bbox[0][0]
+        scale_z = bbox[1][2] - bbox[0][2]
+        center_z = bbox[0][2]
+        for i in range(2):
+            fix_y = torch.tensor([fix_ys[i]], device="cuda").unsqueeze(1).repeat(N_each_face, 1)
+            random_x = torch.rand((N_each_face, 1), device="cuda") * scale_x + center_x
+            random_z = torch.rand((N_each_face, 1), device="cuda") * scale_z + center_z
+            add_xyzs.append(torch.cat((random_x, fix_y, random_z), dim=1))
+
+        # fix z
+        fix_zs = [bbox[0][2], bbox[1][2]]
+        scale_x = bbox[1][0] - bbox[0][0]
+        center_x = bbox[0][0]
+        scale_y = bbox[1][1] - bbox[0][1]
+        center_y = bbox[0][1]
+        for i in range(2):
+            fix_z = torch.tensor([fix_zs[i]], device="cuda").unsqueeze(1).repeat(N_each_face, 1)
+            random_x = torch.rand((N_each_face, 1), device="cuda") * scale_x + center_x
+            random_y = torch.rand((N_each_face, 1), device="cuda") * scale_y + center_y
+            add_xyzs.append(torch.cat((random_x, random_y, fix_z), dim=1))
+
+        add_xyz = torch.cat(add_xyzs, dim=0)
+            
+        random_indices = torch.randperm(self.get_xyz.shape[0])[:total_N]
+        # stds = self.get_scaling[random_indices]
+        # means = torch.zeros((stds.size(0), 3), device="cuda")
+        # samples = torch.normal(mean=means, std=stds)
+        # rots = build_rotation(self._rotation[random_indices])
+        # add_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[random_indices]
+        add_scaling = self.scaling_inverse_activation(self.get_scaling[random_indices] / 1.6)
+        add_rotation = self._rotation[random_indices]
+        add_features_dc = self._features_dc[random_indices]
+        # add_segment_p = torch.cat((torch.ones((total_N, 1), device="cuda"), torch.zeros((total_N, 1), device="cuda")), dim=1)
+        add_segment_p = self._segment_p[random_indices]
+        add_features_rest = self._features_rest[random_indices]
+        add_opacity = self._opacity[random_indices]
+        self.densification_child_postfix(add_xyz, add_features_dc, add_segment_p, add_features_rest, add_opacity, add_scaling, add_rotation)
+        new_label = torch.ones((N, 1), dtype=torch.bool, device="cuda")
+        self.label = torch.cat((new_label, self.label), dim=0)
 
 # 透视投影矩阵
 def getProjectionMatrix(znear, zfar, fovX, fovY):
@@ -756,6 +969,23 @@ class Renderer:
         )
         # load checkpoint
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    def create_children(self):
+        for i, chi in enumerate(self.gaussians.child):
+
+            if i == 1:
+                continue
+            
+            edge = chi.get_scene_other_xyz.max(dim=0).values - chi.get_scene_other_xyz.min(dim=0).values
+            edge = edge.cpu().detach().numpy()
+            print(f'the edge of the child is {edge}')
+            center = 0.5 * (chi.get_scene_other_xyz.max(dim=0).values + chi.get_scene_other_xyz.min(dim=0).values)
+            center = center.cpu().detach().numpy()
+            child_gm = GaussianModel(self.sh_degree, center, edge)
+            child_gm.create_child_from_other(chi)
+            chi.child.append(child_gm)
+
+            
     
     def initialize(self, input=None, num_pts=100000):
         if input is None:

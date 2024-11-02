@@ -4,17 +4,29 @@
 input: 
 # # scene_prompt
 
-scene: 'An orange cat with hat, sunglasses and clothes is lying'
-prompt: ['An orange cat with hat, sunglasses and clothes is lying']
-edit_prompt:
+seg_prompt: skirt
+
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/seg_coat_man_shirt_trousers_1101_1/seg_coat_man_shirt_trousers_1101_1_A_man_in_coat_is_waving_1_model.ply']
+
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/seg_coat_man_shirt_trousers_1101_1/seg_coat_man_shirt_trousers_1101_1_floor_model.ply
+
+# scene: A girl wears t-shirt, leggings, skirt, hat and shoes is dancing
+
+scene: 'A yellow dog wears shoes, sunglasses and hat'
+# scene: 'A man in coat is waving'
+edit_prompt: ['black coat']
+prompt: ['A yellow dog wears shoes, sunglasses and hat']
+# prompt: ['Black coat']
 
 floor: ['light-colored wood floor']
 
-center: [[0.0, 0.4, 0.0]]
+center: [[0.0, 0.55, 0.0]]
 
-edge: [[0.8, 0.6, 0.8]]
+edge: [[0.4, 0.8, 0.4]]
 
 ori: [0]
+
+load_object:
 
 # layout scale
 layout_scale: 1
@@ -29,12 +41,18 @@ density_thresh: 1
 # floor point scale
 floor_scale: 0.02
 
-load_object:
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_A_realistic_man_in_brown_trousers,_black_trench_coat_and_red_t-shirt,_and_the_man_is_waving_1_model.ply']
+
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_floor_model.ply
+
+# load_object: 
 
 ### Output
+# outdir: bedroom
+# save_path: bedroom
 
-outdir: cat_1102_1
-save_path: cat_1102_1
+outdir: dog_1101_2
+save_path: dog_1101_2
 
 ### Training
 # enable overlap reg loss
@@ -49,7 +67,8 @@ mvdream: True
 lambda_zero123: 0
 # training iterations
 # iters: 20000
-iters: 12000
+iters: 15000
+# iters: 2000
 # training camera radius
 radius: 3
 # training camera fovy
@@ -69,7 +88,7 @@ H: 800
 W: 800
 
 ### Gaussian splatting
-# num_pts: 400000
+# num_pts: 100000
 num_pts: 150000
 sh_degree: 0
 position_lr_init: 0.00016

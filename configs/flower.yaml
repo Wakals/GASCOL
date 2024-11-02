@@ -20,27 +20,74 @@ input:
 # # orientation
 # ori: [0, 0, 0, 0, 0, 180]
 
-# scene: 'A panda is sitting on a chair with two armrests'
-# prompt: ['A panda with mouth open, one hand on the armrest and the other on its leg is sitting', 'A chair with two armrests']
+# scene: 'A panda is waving'
+# prompt: ['A panda is waving']
+# edit_prompt:
+# # prompt: ['black chair', 'black chair']
 
 # floor: ['light-colored wood floor']
 
-# center: [[0.0, 0.6, 0.0], [0.0, 0.2, 0.0]]
+# center: [[0.1, 0.6, 0.0]]
+
+# edge: [[0.5, 0.8, 0.5]]
+
+# ori: [0]
+
+scene: 'A man in pink trousers, blue shoes and yellow shirt is waving'  # 把 不同的 part 顺序调整一下，看看效果
+edit_prompt: 
+prompt: ['A man in pink trousers, blue shoes and yellow shirt is waving']
+
+floor: ['light-colored wood floor']
+
+center: [[0.0, 0.55, 0.0]]
+
+edge: [[0.4, 0.8, 0.4]]
+
+ori: [0]
+
+# scene: 'A panda with mouth open is waving and sitting on a wooden chair with two black armrests'
+# prompt: ['A panda with mouth open is sitting and waving', 'A wooden chair with two black armrests']
+# edit_prompt: ['A panda is waving']
+# # prompt: ['black chair', 'black chair']
+
+# floor: ['light-colored wood floor']
+
+# center: [[0.1, 0.6, 0.0], [0.0, 0.2, 0.0]]
 
 # edge: [[0.5, 0.8, 0.5], [0.6, 0.4, 0.6]]
 
 # ori: [0, 0]
 
-scene: 'The black and white cat is wearing shades with a pink border'
-prompt: ['The black and white cat is wearing shades with a pink border']
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/seg_panda_1021_1/seg_panda_1021_1_A_panda_with_mouth_open_is_sitting_and_waving_1_model.ply', '/network_space/server129/qinyiming/GALA3D-main/3d_models/seg_panda_1021_1/seg_panda_1021_1_A_wooden_chair_with_two_black_armrests_1_model.ply']
 
-floor: ['light-colored wood floor']
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/panda_0918_1/panda_0918_1_floor_model.ply
 
-center: [[0.0, 0.3, 0.0]]
+# scene: 'A flower with six blue petals'
+# # prompt: ['A man with mouth open, one hand on the armrest and the other on his leg is sitting', 'A wooden chair with two black armrests']
+# prompt: ['A flower with six blue petals']
 
-edge: [[0.8, 0.6, 0.6]]
+# floor: ['light-colored wood floor']
 
-ori: [0]
+# center: [[0.0, 0.5, 0.0]]
+
+# edge: [[0.8, 0.8, 0.8]]
+
+# ori: [0]
+
+load_object: 
+
+load_floor: 
+
+# scene: 'The black and white cat is wearing shades with a pink border'
+# prompt: ['The black and white cat is wearing shades with a pink border']
+
+# floor: ['light-colored wood floor']
+
+# center: [[0.0, 0.3, 0.0]]
+
+# edge: [[0.8, 0.6, 0.6]]
+
+# ori: [0]
 
 # scene: 'A realistic man in brown trousers, black trench coat and red t-shirt, and the man is waving'  # 把 不同的 part 顺序调整一下，看看效果
 # prompt: ['A realistic man is waving', 'brown trousers', 'black trench coat', 'red t-shirt']
@@ -88,18 +135,18 @@ density_thresh: 1
 # floor point scale
 floor_scale: 0.02
 
-load_object:
+# load_object:
 
 ### Output
 # outdir: bedroom
 # save_path: bedroom
 
-outdir: cat_0920_2
-save_path: cat_0920_2
+outdir: man_1027_2
+save_path: man_1027_2
 
 ### Training
 # enable overlap reg loss
-overlap: True
+overlap: False
 # enable layout loss
 layout: True
 # enable scale loss
@@ -109,8 +156,8 @@ lambda_sd: 1
 mvdream: True
 lambda_zero123: 0
 # training iterations
-iters: 20000
-# iters: 15000
+# iters: 20000
+iters: 12000
 # training camera radius
 radius: 3
 # training camera fovy
@@ -130,8 +177,8 @@ H: 800
 W: 800
 
 ### Gaussian splatting
-# num_pts: 100000
-num_pts: 120000
+num_pts: 100000
+# num_pts: 120000
 sh_degree: 0
 position_lr_init: 0.00016
 position_lr_final: 0.0000016

@@ -1,0 +1,7 @@
+change:
+1. path of ckpt
+2. dir name for saving
+3. lr of xyz
+4. lr of color
+5. operation function
+6. text prompt

@@ -13,10 +13,9 @@ from cldm.model import create_model, load_state_dict
 from cldm.ddim_hacked import DDIMSampler
 from annotator.mlsd import MLSDdetector
 from diffusers import DDIMScheduler
-from annotator.zoe import ZoeDetector
 from annotator.pidinet import PidiNetDetector
 
-class CLDM(nn.Module):
+class CLDM_O(nn.Module):
     def __init__(
             self,
             device,
@@ -25,9 +24,9 @@ class CLDM(nn.Module):
         super().__init__()
         self.device = device
 
-        self.preprocessor = ZoeDetector()
+        self.preprocessor = PidiNetDetector()
 
-        model_name = 'control_v11f1p_sd15_depth'
+        model_name = 'control_v11p_sd15_softedge'
         self.model = create_model(f'./ControlNet-v1-1-nightly/models/{model_name}.yaml').cpu()
 
         self.model.load_state_dict(load_state_dict('./ControlNet-v1-1-nightly/models/v1-5-pruned.ckpt', location='cuda'), strict=False)
@@ -87,22 +86,22 @@ class CLDM(nn.Module):
 
     # input_image: [1, 3, 512, 512] in [0, 1] cuda tensor
     # layout_image: read PNG file in [0, 255] np.uint8
-    def train_step(self, input_image, layout_image, detect_resolution=512, image_resolution=512, guidance_scale=100, 
+    def train_step(self, input_image, edge_image, detect_resolution=512, image_resolution=512, guidance_scale=100, 
              a_prompt='best quality, extremely detailed',
              n_prompt='unrealistic, blurry, low quality, out of focus, ugly, low contrast, dull, low-resolution, oversaturation.',
              num_samples=1, ddim_steps=50, guess_mode=False, strength=0.8, eta=0.0, step_ratio=None, value_threshold=0.1, distance_threshold=0.1):
         
         prompt = self.prompt
-        layout_image = HWC3(layout_image)
-        # detected_map = self.apply_uniformer(resize_image(layout_image, detect_resolution))
-        # detected_map = layout_image
-        # detected_map = self.apply_mlsd(resize_image(layout_image, detect_resolution), value_threshold, distance_threshold)
-        detected_map = self.preprocessor(resize_image(layout_image, detect_resolution))
-        image = Image.fromarray(detected_map)
-        image.save('detected_map.png')
+        edge_image = HWC3(edge_image)
+        # detected_map = self.apply_uniformer(resize_image(edge_image, detect_resolution))
+        # detected_map = edge_image
+        # detected_map = self.apply_mlsd(resize_image(edge_image, detect_resolution), value_threshold, distance_threshold)
+        detected_map = self.preprocessor(resize_image(edge_image, detect_resolution))
+        # image = Image.fromarray(detected_map)
+        # image.save('detected_map.png')
         detected_map = HWC3(detected_map)
 
-        img = resize_image(layout_image, image_resolution)
+        img = resize_image(edge_image, image_resolution)
         H, W, C = img.shape
 
         detected_map = cv2.resize(detected_map, (W, H), interpolation=cv2.INTER_NEAREST)
@@ -141,7 +140,7 @@ class CLDM(nn.Module):
             # perform guidance
             noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_pos - noise_pred_uncond)
 
-            images = self.create_image(latents_noisy, ts, noise_pred).permute(0, 3, 1, 2) # [1, 256, 256, 3]
+            # images = self.create_image(latents_noisy, ts, noise_pred).permute(0, 3, 1, 2) # [1, 256, 256, 3]
 
         grad = (noise_pred - noise)
         grad = torch.nan_to_num(grad)
@@ -149,21 +148,21 @@ class CLDM(nn.Module):
         target = (latents - grad).detach()
         loss = 0.5 * F.mse_loss(latents.float(), target, reduction='sum') / latents.shape[0]
 
-        return loss, images
+        return loss, None
 
-    def train_step_image(self, input_image, layout_image, detect_resolution=512, image_resolution=512, guidance_scale=100, 
+    def train_step_image(self, input_image, edge_image, detect_resolution=512, image_resolution=512, guidance_scale=100, 
              a_prompt='best quality, extremely detailed',
              n_prompt='unrealistic, blurry, low quality, out of focus, ugly, low contrast, dull, low-resolution, oversaturation.',
              num_samples=1, ddim_steps=50, guess_mode=False, strength=0.8, eta=0.0, step_ratio=None, value_threshold=0.1, distance_threshold=0.1):
         
         prompt = self.prompt
-        layout_image = HWC3(layout_image)
-        detected_map = self.preprocessor(resize_image(layout_image, detect_resolution))
+        edge_image = HWC3(edge_image)
+        detected_map = self.preprocessor(resize_image(edge_image, detect_resolution))
         # image = Image.fromarray(detected_map)
         # image.save('detected_map.png')
         detected_map = HWC3(detected_map)
 
-        img = resize_image(layout_image, image_resolution)
+        img = resize_image(edge_image, image_resolution)
         H, W, C = img.shape
 
         detected_map = cv2.resize(detected_map, (W, H), interpolation=cv2.INTER_NEAREST)
@@ -234,12 +233,12 @@ class CLDM(nn.Module):
 
 if __name__ == '__main__':
     device = torch.device('cuda')
-    cldm = CLDM(device)
+    cldm = CLDM_O(device)
     cldm.eval()
     input_image = torch.rand((1, 3, 512, 512)).cuda()
-    layout_image = Image.open('/network_space/server129/qinyiming/GALA3D-main/image_scene.jpg')
+    layout_image = Image.open('/gala3d/guidance/90.png')
     layout_image = np.array(layout_image).astype(np.uint8)
-    loss, img = cldm.train_step(input_image, layout_image)
+    loss, img = cldm.sds(input_image, layout_image)
     tensor = img.squeeze().permute(2, 0, 1)
     tensor = (tensor * 255).byte()
     numpy_array = tensor.cpu().numpy()
