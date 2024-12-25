@@ -4,15 +4,15 @@
 input: 
 # # scene_prompt
 
-scene: 'An orange cat with hat, sunglasses and clothes is lying'
-prompt: ['An orange cat with hat, sunglasses and clothes is lying']
+scene: 'An orange cat with sunglasses is lying'
+prompt: ['An orange cat with sunglasses is lying']
 edit_prompt:
 
 floor: ['light-colored wood floor']
 
-center: [[0.0, 0.4, 0.0]]
+center: [[0.0, 0.3, 0.0]]
 
-edge: [[0.8, 0.6, 0.8]]
+edge: [[0.4, 0.4, 0.4]]
 
 ori: [0]
 
@@ -33,8 +33,8 @@ load_object:
 
 ### Output
 
-outdir: cat_1102_1
-save_path: cat_1102_1
+outdir: cat_1104_1
+save_path: cat_1104_1
 
 ### Training
 # enable overlap reg loss
@@ -70,7 +70,7 @@ W: 800
 
 ### Gaussian splatting
 # num_pts: 400000
-num_pts: 150000
+num_pts: 200000
 sh_degree: 0
 position_lr_init: 0.00016
 position_lr_final: 0.0000016

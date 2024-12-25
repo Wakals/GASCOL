@@ -1,7 +1,7 @@
 /_pycache_/
 /.vscode/
-/image_results/
-/3d_models/
+/*image_results/
+/*3d_models/
 /ControlNet-v1-1-nightly/
 /diff-gaussian-rasterization/
 /mask_image/

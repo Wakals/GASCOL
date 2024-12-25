@@ -72,50 +72,24 @@ input:
 
 seg_prompt: coat
 
-load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_A_man_in_coat_is_waving_1_model.ply']
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_A_man_in_coat_is_waving_1_model.ply']
 
-load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_floor_model.ply
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_floor_model.ply
 
+# A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving
 # scene: 'A man in coat, trousers, shoes and shirt is waving'
-scene: 'A man wearing hat is waving'
+scene: 'A man in shirt, trousers and shoes is waving'
 edit_prompt: ['black coat']
-prompt: ['A man wearing hat is waving']
+prompt: ['A man in shirt, trousers and shoes is waving']
 # prompt: ['Black coat']
 
-floor: ['light-colored wood floor']
+floor:
 
 center: [[0.0, 0.55, 0.0]]
 
 edge: [[0.4, 0.8, 0.4]]
 
 ori: [0]
-
-# scene: 'A girl in yellow skirt is waving'
-# edit_prompt: ['yellow skirt']
-# prompt: ['A girl in yellow skirt is waving']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.0, 0.55, 0.0]]
-
-# edge: [[0.4, 0.8, 0.4]]
-
-# ori: [0]
-
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/seg_girl_skirt_1016_1/seg_girl_skirt_1016_1_A_girl_is_waving_1_model.ply']
-
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/seg_girl_skirt_1016_1/seg_girl_skirt_1016_1_floor_model.ply
-
-# scene: 'A realistic man in brown trousers, black trench coat and red t-shirt, and the man is waving'  # 把 不同的 part 顺序调整一下，看看效果
-# prompt: ['A realistic man is waving', 'brown trousers', 'black trench coat', 'red t-shirt']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.0, 0.4, 0.0], [0.0, 0.2, 0.0], [0.0, 0.6, 0.0], [0.0, 0.6, 0.0]]
-
-# edge: [[0.4, 0.8, 0.4], [0.4, 0.4, 0.4], [0.4, 0.4, 0.4], [0.3, 0.4, 0.3]]
-
-# ori: [0, 0, 0, 0]
 
 # layout scale
 layout_scale: 1
@@ -130,18 +104,18 @@ density_thresh: 1
 # floor point scale
 floor_scale: 0.02
 
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_A_realistic_man_in_brown_trousers,_black_trench_coat_and_red_t-shirt,_and_the_man_is_waving_1_model.ply']
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/random_order_3d_models/seg_man_shirt_trousers_shoes_1115_1/seg_man_shirt_trousers_shoes_1115_1_A_man_in_gray_hat_is_waving_1_model.ply']
 
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_floor_model.ply
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/random_order_3d_models/seg_man_shirt_trousers_shoes_1115_1/seg_man_shirt_trousers_shoes_1115_1_floor_model.ply
 
-# load_object: 
+load_object: 
 
 ### Output
 # outdir: bedroom
 # save_path: bedroom
 
-outdir: hat_coat_man_shirt_trousers_coat_1101_1
-save_path: hat_coat_man_shirt_trousers_coat_1101_1
+outdir: man_1119_1
+save_path: man_1119_1
 
 ### Training
 # enable overlap reg loss
@@ -177,7 +151,7 @@ H: 800
 W: 800
 
 ### Gaussian splatting
-num_pts: 100000
+num_pts: 500000
 # num_pts: 120000
 sh_degree: 0
 position_lr_init: 0.00016

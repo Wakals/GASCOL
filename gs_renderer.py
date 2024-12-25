@@ -510,12 +510,20 @@ class GaussianModel:
         opacities = self._opacity.detach().cpu().numpy()
         scale = self._scaling.detach().cpu().numpy()
         rotation = self._rotation.detach().cpu().numpy()
-        print(f'the shape of label is {self.label.shape}')
         label = self.label.cpu().numpy()
 
         dtype_full = [(attribute, 'f4') for attribute in self.construct_list_of_attributes()]
 
         elements = np.empty(xyz.shape[0], dtype=dtype_full)
+        # print(f'the size of xyz is {xyz.shape}')
+        # print(f'the size of normals is {normals.shape}')
+        # print(f'the size of segment_p is {segment_p.shape}')
+        # print(f'the size of f_dc is {f_dc.shape}')
+        # print(f'the size of f_rest is {f_rest.shape}')
+        # print(f'the size of opacities is {opacities.shape}')
+        # print(f'the size of scale is {scale.shape}')
+        # print(f'the size of rotation is {rotation.shape}')
+        # print(f'the size of label is {label.shape}')
         attributes = np.concatenate((xyz, normals, segment_p, f_dc, f_rest, opacities, scale, rotation, label), axis=1)
         elements[:] = list(map(tuple, attributes))
         el = PlyElement.describe(elements, 'vertex')
@@ -764,12 +772,12 @@ class GaussianModel:
 
         torch.cuda.empty_cache()
 
-    def densify_chi_child(self, N=200):
+    def densify_chi_child(self, N=5):
         for chi in self.child:
             num_pts = chi.get_xyz.shape[0]
-            if N * num_pts > 50000:
+            if N * num_pts > 100000:
                 # print('Here')
-                N = 50000 // num_pts
+                N = 100000 // num_pts
             stds = chi.get_scaling.repeat(N,1)
             # means = torch.zeros((stds.size(0), 3), device="cuda") + torch.randn((stds.size(0), 3), device="cuda") * 0.001
             means = torch.zeros((stds.size(0), 3), device="cuda")
@@ -788,7 +796,9 @@ class GaussianModel:
             new_features_rest = chi._features_rest.repeat(N,1,1)
             new_opacity = chi._opacity.repeat(N,1)
             chi.densification_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacity, new_scaling, new_rotation)
+            new_label = torch.zeros((N*num_pts, 1), dtype=torch.bool, device="cuda")
             self.densification_child_postfix(new_xyz, new_features_dc, new_segment_p, new_features_rest, new_opacity, new_scaling, new_rotation)
+            self.label = torch.cat((new_label, self.label), dim=0)
         
         
     def densification_child_postfix(self, new_other_xyz, new_other_features_dc, new_other_segment_p, new_other_features_rest, new_other_opacity, new_other_scaling, new_other_rotation):
@@ -818,10 +828,12 @@ class GaussianModel:
         self.xyz_gradient_accum[update_filter] += torch.norm(viewspace_point_tensor.grad[update_filter,:2], dim=-1, keepdim=True)
         self.denom[update_filter] += 1
 
-    def densify_directly(self, N=100000):
+    def densify_directly(self, N=500000):
+        N = min(N, self.get_xyz.shape[0])
+        print(f'the number of densified point is {N}')
         random_indices = torch.randperm(self.get_xyz.shape[0])[:N]
         stds = self.get_scaling[random_indices]
-        means = torch.zeros((stds.size(0), 3), device="cuda")
+        means = torch.zeros((stds.size(0), 3), device="cuda") + torch.randn((stds.size(0), 3), device="cuda") * 0.01
         samples = torch.normal(mean=means, std=stds)
         rots = build_rotation(self._rotation[random_indices])
         add_xyz = torch.bmm(rots, samples.unsqueeze(-1)).squeeze(-1) + self.get_xyz[random_indices]

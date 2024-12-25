@@ -4,29 +4,30 @@
 input: 
 # # scene_prompt
 
-seg_prompt: skirt
+seg_prompt: collar
 
-load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/panda_1103_4/panda_1103_4_A_panda_eats_a_piece_of_bamboo_1_model.ply']
+# a yellow dog wears a shirt, two pairs of shoes and a scarf
+# a yellow dog wears a pink shirt, two pairs of pink shoes and a blue collar
+# a silver vase on a golden table
+# cd ../GALA3D-main
+# conda activate qym_GALA3D
 
-load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/panda_1103_4/panda_1103_4_floor_model.ply
-
-# scene: A girl wears t-shirt, leggings, skirt, hat and shoes is dancing
-
-# scene: 'A panda eats a piece of bamboo'
-scene: 'A panda wears red shirt'
-edit_prompt:
-prompt: ['A panda wears red shirt']
+# scene: 'a blue peony and a yellow tulip in a pink vase'
+# scene: 'a red rose and a yellow tulip in a pink vase'
+scene: 'a white tulip and a yellow tulip in a pink vase'
+edit_prompt: ['']
+prompt: ['a white tulip', 'a yellow tulip', 'a pink vase']
 # prompt: ['Black coat']
 
-floor: ['light-colored wood floor']
+floor:
 
-center: [[0.0, 0.2, 0.0]]
+center: [[-0.1, 0.65, -0.1], [0.1, 0.65, 0.1], [0.0, 0.4, 0.0]]
 
-edge: [[0.4, 0.4, 0.4]]
+edge: [[0.2, 0.6, 0.2], [0.2, 0.6, 0.2], [0.6, 0.8, 0.6]]
 
-ori: [0]
+ori: [0, 0, 0]
 
-# load_object:
+load_object:
 
 # layout scale
 layout_scale: 1
@@ -41,18 +42,16 @@ density_thresh: 1
 # floor point scale
 floor_scale: 0.02
 
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_A_realistic_man_in_brown_trousers,_black_trench_coat_and_red_t-shirt,_and_the_man_is_waving_1_model.ply']
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/seg_hat_shoes_shirt_dog_1114_1/seg_hat_shoes_shirt_dog_1114_1_a_yellow_dog_wears_a_blue_hat_1_model.ply']
 
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/man_1003_2/man_1003_2_floor_model.ply
-
-# load_object: 
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/seg_hat_shoes_shirt_dog_1114_1/seg_hat_shoes_shirt_dog_1114_1_floor_model.ply
 
 ### Output
 # outdir: bedroom
 # save_path: bedroom
 
-outdir: shirt_panda_1104_1
-save_path: shirt_panda_1104_1
+outdir: flower_1120_2
+save_path: flower_1120_2
 
 ### Training
 # enable overlap reg loss
@@ -67,7 +66,7 @@ mvdream: True
 lambda_zero123: 0
 # training iterations
 # iters: 20000
-iters: 12000
+iters: 15000
 # iters: 2000
 # training camera radius
 radius: 3
@@ -89,7 +88,7 @@ W: 800
 
 ### Gaussian splatting
 # num_pts: 100000
-num_pts: 120000
+num_pts: 500000
 sh_degree: 0
 position_lr_init: 0.00016
 position_lr_final: 0.0000016

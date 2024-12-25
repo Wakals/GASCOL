@@ -73,5 +73,5 @@ def get_chain(prompt):
 
 
 if __name__ == "__main__":
-    # layout = get_chain("A man in black coat, pink trousers, yellow shirt, black hat and blue shoes is waving")
-    layout = get_chain("A girl wears t-shirt, leggings, skirt, hat and shoes is dancing")
+    layout = get_chain("A man in black coat, yellow shirt, pink trousers, blue shoes and green hat is waving")
+    # layout = get_chain("A girl wears t-shirt, leggings, skirt, hat and shoes is dancing")
