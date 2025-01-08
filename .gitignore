@@ -6,4 +6,6 @@
 /diff-gaussian-rasterization/
 /mask_image/
 /segment_image/
+/tmp/
+/*_configs/
 *.safetensors

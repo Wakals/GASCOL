@@ -1406,6 +1406,9 @@ class GUI:
 
 
 def gpt_response():
+    """
+    use GPT to generate the hierarchical chain of generation
+    """
     pass
 
 
@@ -1433,7 +1436,15 @@ if __name__ == "__main__":
     opt = OmegaConf.merge(OmegaConf.load(args.config), OmegaConf.from_cli(extras))
 
     gui = GUI(opt)
-    gui.train(opt.iters)
+    """
+    use the whole pipeline
+    """
+    pipeline(gui)
+
+    """
+    break down the pipeline
+    """
+    # gui.train(opt.iters)
     # gui.train_extend(iters=15000)
     # gui.train_seg(iters=200)
     # gui.render_seg_scene()

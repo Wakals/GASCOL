@@ -2,74 +2,6 @@
 ## Input
 # input rgba image path (default to None, can be load in GUI too)
 input: 
-# # scene_prompt
-# scene: 'A bedroom with a bed, two wooden nightstands, a square wooden table with a table lamp on it, and a wooden wardrobe'
-# # input text prompt (default to None, can be input in GUI too)
-# prompt: ['A table lamp',
-# 'A square wooden dining table is supported by four solid legs',
-# 'A bed',
-# 'A compact wooden nightstand with two drawers',
-# 'A compact wooden nightstand with two drawers',
-# 'A wooden wardrobe with double doors']
-# # floor prompt
-# floor: ['light-colored wood floor']
-# # input object center
-# center: [[0.45, 0.375, 0.7], [0.45, 0.15, 0.7], [-0.55, 0.2, 0], [-0.75, 0.15, 0.5], [-0.75, 0.15, -0.5], [0.3, 0.2, -0.7]]
-# # input object edge
-# edge: [[0.1, 0.15, 0.1], [0.3, 0.3, 0.3], [0.7, 0.4, 0.5], [0.2, 0.3, 0.25], [0.2, 0.3, 0.25], [0.4, 0.4, 0.2]]
-# # orientation
-# ori: [0, 0, 0, 0, 0, 180]
-
-# scene: 'The flower consists of three pink petals and two yellow petals on a wooden table'
-# prompt: ['The flower consists of three pink petals and two yellow petals', 'A wooden table']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.0, 0.7, 0.0], [0.0, 0.3, 0.0]]
-
-# edge: [[0.2, 0.2, 0.2], [0.6, 0.6, 0.6]]
-
-# ori: [0, 0]
-
-# scene: 'A panda is sitting on a chair with two armrests'
-# prompt: ['A panda with mouth open and without no arms', 'A right arm of panda on the armrest', 'A left arm of panda on the leg', 'A chair with two armrests']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.075, 0.7, 0.0], [0.15, 0.7, 0.2], [0.15, 0.65, -0.2], [0.0, 0.3, 0.0]]
-
-# edge: [[0.4, 0.6, 0.4], [0.2, 0.1, 0.1], [0.2, 0.1, 0.1], [0.6, 0.6, 0.6]]
-
-# ori: [0, 0, 0, 0]
-
-# scene: 'A man is sitting on a chair with two armrests'
-# prompt: ['A man with mouth open and without no arms', 'A right arm of man on the armrest', 'A left arm of man on the leg', 'A chair with two armrests']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.075, 0.7, 0.0], [0.15, 0.7, 0.2], [0.15, 0.65, -0.2], [0.0, 0.3, 0.0]]
-
-# edge: [[0.4, 0.6, 0.4], [0.2, 0.1, 0.1], [0.2, 0.1, 0.1], [0.6, 0.6, 0.6]]
-
-# ori: [0, 0, 0, 0]
-
-# scene: 'A man was wearing a black and white striped shirt, brown pants, black leather boots and a pair of sunglasses'
-
-# # prompt: ['black']
-# prompt: ['A man was wearing a black and white striped shirt, brown pants, black leather boots and a pair of sunglasses']
-
-# floor: ['light-colored wood floor']
-
-# center: [[0.0, 0.55, 0.0]]
-
-# edge: [[0.4, 0.8, 0.4]]
-
-# ori: [0]
-
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/man_1027_1/man_1027_1_A_man_in_trousers,_shoes_and_shirt_is_waving_1_model.ply']
-
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/man_1027_1/man_1027_1_floor_model.ply
-
 seg_prompt: coat
 
 # load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_A_man_in_coat_is_waving_1_model.ply']
@@ -78,9 +10,9 @@ seg_prompt: coat
 
 # A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving
 # scene: 'A man in coat, trousers, shoes and shirt is waving'
-scene: 'A man in shirt, trousers and shoes is waving'
+scene: 'A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving'
 edit_prompt: ['black coat']
-prompt: ['A man in shirt, trousers and shoes is waving']
+prompt: ['A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving']
 # prompt: ['Black coat']
 
 floor:
@@ -103,10 +35,6 @@ ref_size: 256
 density_thresh: 1
 # floor point scale
 floor_scale: 0.02
-
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/random_order_3d_models/seg_man_shirt_trousers_shoes_1115_1/seg_man_shirt_trousers_shoes_1115_1_A_man_in_gray_hat_is_waving_1_model.ply']
-
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/random_order_3d_models/seg_man_shirt_trousers_shoes_1115_1/seg_man_shirt_trousers_shoes_1115_1_floor_model.ply
 
 load_object: 
 
