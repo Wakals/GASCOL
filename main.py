@@ -11,10 +11,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 
-import rembg
+# import rembg
 
 from cam_utils import orbit_camera, OrbitCamera
 from gs_renderer import Renderer, MiniCam
+from gpt.PE import get_chain
 
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -137,7 +138,8 @@ class GUI:
         self.step = 0
 
         # setup training
-        self.renderer.gaussians.training_setup(self.opt, stage=train_stage)
+        if train_stage != 2:
+            self.renderer.gaussians.training_setup(self.opt, stage=train_stage)
         for chi in self.renderer.gaussians.child:
             chi.training_setup(self.opt, stage=train_stage)
             chi.active_sh_degree = 0
@@ -457,12 +459,7 @@ class GUI:
         vers = [-30] * 36
         hors = [i * 10 for i in range(-18, 18)]
         render_resolution = 512
-        # out_dir = './C_image_results/'
-        # out_dir = './M_image_results/'
-        # out_dir = './Shape_image_results/'
-        out_dir = './CSP_image_results/'
-        # out_dir = './random_order_image_results/'
-        # out_dir = './image_results/'
+        out_dir = './image_results/'
         if not os.path.exists(out_dir):
             os.makedirs(out_dir, exist_ok=True)
         if not os.path.exists(out_dir + self.opt.save_path + name):
@@ -491,12 +488,7 @@ class GUI:
 
     @torch.no_grad()
     def save_model(self):
-        # out_dir = './C_3d_models/'
-        # out_dir = './M_3d_models/'
-        # out_dir = './Shape_3d_models/'
-        out_dir = './CSP_3d_models/'
-        # out_dir = './random_order_3d_models/'
-        # out_dir = './3d_models/'
+        out_dir = './3d_models/'
         os.makedirs(out_dir, exist_ok=True)
         os.makedirs(out_dir + self.opt.outdir, exist_ok=True)
         from collections import Counter
@@ -535,7 +527,7 @@ class GUI:
 
                 if (i + 1) % 1000 == 0 or i == 0:
                     self.save_snapshot(i + 1)
-
+            
             torch.cuda.empty_cache()
             if self.opt.floor:
                 self.renderer.gaussians._xyz = torch.cat([chi.get_scene_xyz for chi in self.renderer.gaussians.child] + [self.renderer.gaussians.floor._xyz], dim=0)
@@ -562,6 +554,10 @@ class GUI:
 
             for chi in self.renderer.gaussians.child:
                 print(f'{chi.prompt} center: {chi.object_center}, scale_factor: {chi.scale_factor}')
+                
+        del self.guidance_cldm
+        torch.cuda.empty_cache()
+        
 
     def train_seg_step(self, SAM_model):
         
@@ -709,13 +705,9 @@ class GUI:
             for chi in self.renderer.gaussians.child:
                 chi.reset_segment_p()
             self.renderer.gaussians.reset_segment_p()
-            self.prepare_train(train_stage=2)
+            self.prepare_train(train_stage=2, use_cn=False)
 
             for i in tqdm.trange(iters):
-                if i >= 300:
-                    opt.seg_prompt = 'coat'
-                if i >= 600:
-                    opt.seg_prompt = 'shoes'
                 self.train_seg_step(SAM_model)
 
             torch.cuda.empty_cache()
@@ -831,7 +823,7 @@ class GUI:
 
 
     def render_seg_scene(self, iters=2500):
-        self.prepare_train(train_stage=3)
+        self.prepare_train(train_stage=3, use_cn=False)
 
         idxs = []
         fix_idxs = []
@@ -1022,6 +1014,15 @@ class GUI:
                 self.renderer.gaussians._rotation = torch.cat([chi.get_scene_rotation for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians._opacity = torch.cat([chi._opacity for chi in self.renderer.gaussians.child], dim=0)
                 self.renderer.gaussians.label = torch.cat([chi.label for chi in self.renderer.gaussians.child], dim=0)
+                
+            for chi in self.renderer.gaussians.child:
+                chi._xyz = chi._xyz.detach()
+                chi._segment_p = chi._segment_p.detach()
+                chi._features_dc = chi._features_dc.detach()
+                chi._features_rest = chi._features_rest.detach()
+                chi._scaling = chi._scaling.detach()
+                chi._rotation = chi._rotation.detach()
+                chi._opacity = chi._opacity.detach()
             
             # save
             self.save_snapshot(0)
@@ -1029,6 +1030,12 @@ class GUI:
 
             for chi in self.renderer.gaussians.child:
                 print(f'{chi.prompt} center: {chi.object_center}, scale_factor: {chi.scale_factor}')
+                
+        self.renderer.remove_children()
+                
+        del self.cldm_o
+        torch.cuda.empty_cache()
+        
 
     def train_render_seg_scene_step(self):
         starter = torch.cuda.Event(enable_timing=True)
@@ -1342,15 +1349,6 @@ class GUI:
                 chi._rotation = torch.cat([chi.other_rotation, chi.fix_rotation], dim=0)
                 chi._opacity = torch.cat([chi.other_opacity, chi.fix_opacity], dim=0)
 
-            for chi in self.renderer.gaussians.child:
-                chi._xyz = torch.cat([chi.other_xyz, chi.fix_xyz], dim=0)
-                chi._segment_p = torch.cat([chi.other_segment_p, chi.fix_segment_p], dim=0)
-                chi._features_dc = torch.cat([chi.other_features_dc, chi.fix_features_dc], dim=0)
-                chi._features_rest = torch.cat([chi.other_features_rest, chi.fix_features_rest], dim=0)
-                chi._scaling = torch.cat([chi.other_scaling, chi.fix_scaling], dim=0)
-                chi._rotation = torch.cat([chi.other_rotation, chi.fix_rotation], dim=0)
-                chi._opacity = torch.cat([chi.other_opacity, chi.fix_opacity], dim=0)
-
             self.renderer.gaussians.training_setup(self.opt, stage=3)
             for chi in self.renderer.gaussians.child:
                 chi.training_setup(self.opt, stage=3)
@@ -1358,12 +1356,6 @@ class GUI:
             for i in tqdm.trange(iters):
                 
                 self.train_step()
-                # if i % 1 == 0:
-                #     after_param = self.renderer.gaussians.child[0]._xyz[40000:].detach().clone()
-                #     if torch.equal(before_param, after_param):
-                #         print(f'_xyz has not changed')
-                #     else:
-                #         print(f'_xyz has changed')
 
                 for chi in self.renderer.gaussians.child:
                     chi._xyz = torch.cat([chi.other_xyz, chi.fix_xyz], dim=0)
@@ -1403,23 +1395,43 @@ class GUI:
 
             for chi in self.renderer.gaussians.child:
                 print(f'{chi.prompt} center: {chi.object_center}, scale_factor: {chi.scale_factor}')
-
-
-def gpt_response():
-    """
-    use GPT to generate the hierarchical chain of generation
-    """
-    pass
+                
+            for chi in self.renderer.gaussians.child:
+                chi._xyz = chi._xyz.detach()
+                chi._segment_p = chi._segment_p.detach()
+                chi._features_dc = chi._features_dc.detach()
+                chi._features_rest = chi._features_rest.detach()
+                chi._scaling = chi._scaling.detach()
+                chi._rotation = chi._rotation.detach()
+                chi._opacity = chi._opacity.detach()
+                
+        del self.guidance_cldm
+        torch.cuda.empty_cache()
 
 
 def pipeline(gui):
-    attributes = []
-    attributes = gpt_response()
-    gui.train(opt.iters)
-    for attr in attributes:
-        if attr == "extend":
-            gui.train_extend(iters=15000)
+    chain = get_chain(gui.opt.scene)
+    # chain = {'body': 'A man is waving', 'instances': {'coat': 'black', 'shirt': 'yellow', 'trousers': 'pink', 'leather shoes': 'blue', 'hat': 'green'}, 'stratification_order': ['yellow shirt', 'pink trousers', 'blue leather shoes', 'EXTEND', 'green hat', 'black coat'], 'sub_prompts': ['A man wearing a shirt, trousers and shoes is waving', 'A man wearing a hat and a coat is waving']}
+    print(f'chain is {chain}')
+    body = chain['body']
+    stratification_order = ["EXTEND"] + chain['stratification_order']
+    sub_prompts = chain['sub_prompts']
+    idx = -1
+    for attr in stratification_order:
+        if attr == "EXTEND":
+            idx += 1
+            gui.prompt = [sub_prompts[idx]]
+            gui.scene = sub_prompts[idx]
+            if idx == 0:
+                gui.train(iters=12000)
+            else:
+                gui.train_extend(iters=10000)
         else:
+            gui.opt.seg_prompt = attr.split(' ')[-1]
+            gui.edit_prompt = [attr]
+            gui.opt.edit_prompt = [attr]
+            gui.prompt = [sub_prompts[idx]] + [attr]
+            gui.scene = sub_prompts[idx]
             gui.train_seg(iters=200)
             gui.train_render_seg_scene(iters=3000)
 

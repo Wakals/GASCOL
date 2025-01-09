@@ -845,7 +845,7 @@ class GaussianModel:
         add_features_rest = self._features_rest[random_indices]
         add_opacity = self._opacity[random_indices]
         self.densification_child_postfix(add_xyz, add_features_dc, add_segment_p, add_features_rest, add_opacity, add_scaling, add_rotation)
-        new_label = torch.ones((N, 1), dtype=torch.bool, device="cuda")
+        new_label = torch.ones((self.other_xyz.shape[0], 1), dtype=torch.bool, device="cuda")
         self.label = torch.cat((new_label, self.label), dim=0)
 
     def densify_other(self, N=8000, bbox=None):
@@ -997,6 +997,10 @@ class Renderer:
             child_gm.create_child_from_other(chi)
             chi.child.append(child_gm)
 
+    def remove_children(self):
+        for chi in self.gaussians.child:
+            del chi.child[:]
+            chi.child = []
             
     
     def initialize(self, input=None, num_pts=100000):

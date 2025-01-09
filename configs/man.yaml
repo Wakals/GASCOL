@@ -42,8 +42,8 @@ load_object:
 # outdir: bedroom
 # save_path: bedroom
 
-outdir: man_1119_1
-save_path: man_1119_1
+outdir: man
+save_path: man
 
 ### Training
 # enable overlap reg loss
@@ -79,8 +79,8 @@ H: 800
 W: 800
 
 ### Gaussian splatting
-num_pts: 500000
-# num_pts: 120000
+# num_pts: 500000
+num_pts: 120000
 sh_degree: 0
 position_lr_init: 0.00016
 position_lr_final: 0.0000016

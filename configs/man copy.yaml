@@ -2,20 +2,24 @@
 ## Input
 # input rgba image path (default to None, can be load in GUI too)
 input: 
-# # scene_prompt
+seg_prompt: coat
 
-# scene: 'A standing cartoon dog wearing a cap and boots'
-# scene: 'A standing cartoon dog wearing a cap, shirt, shorts, and boots'
-scene: 'The Donald Duck wears red shirt'
-# scene: 'A dog wearing a collar and shoes, holding a blue frisbee in its mouth'
-prompt: ['The Donald Duck wears red shirt']
-edit_prompt:
+# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_A_man_in_coat_is_waving_1_model.ply']
+
+# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_floor_model.ply
+
+# A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving
+# scene: 'A man in coat, trousers, shoes and shirt is waving'
+scene: 'A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving'
+edit_prompt: ['black coat']
+prompt: ['A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving']
+# prompt: ['Black coat']
 
 floor:
 
-center: [[0.0, 0.3, 0.0]]
+center: [[0.0, 0.55, 0.0]]
 
-edge: [[0.6, 0.6, 0.6]]
+edge: [[0.4, 0.8, 0.4]]
 
 ori: [0]
 
@@ -32,14 +36,14 @@ density_thresh: 1
 # floor point scale
 floor_scale: 0.02
 
-load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/cartoon_1108_3/cartoon_1108_3_model.ply']
-
-load_floor: 
+load_object: 
 
 ### Output
+# outdir: bedroom
+# save_path: bedroom
 
-outdir: shirt_cartoon_1109_1
-save_path: shirt_cartoon_1109_1
+outdir: man_1119_1
+save_path: man_1119_1
 
 ### Training
 # enable overlap reg loss
@@ -54,7 +58,8 @@ mvdream: True
 lambda_zero123: 0
 # training iterations
 # iters: 20000
-iters: 14000
+iters: 12000
+# iters: 2000
 # training camera radius
 radius: 3
 # training camera fovy
@@ -74,8 +79,8 @@ H: 800
 W: 800
 
 ### Gaussian splatting
-# num_pts: 400000
 num_pts: 500000
+# num_pts: 120000
 sh_degree: 0
 position_lr_init: 0.00016
 position_lr_final: 0.0000016
