@@ -3,8 +3,11 @@
 ## Install
 
 ```bash
-pip install -r requirements.txt
+# use new requirements
+pip install -r requirements_new.txt
 
+# or use the original cmd
+pip install -r requirements.txt
 pip install openai==0.28.0
 
 # a modified gaussian splatting
