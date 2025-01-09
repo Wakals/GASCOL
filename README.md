@@ -11,8 +11,8 @@ pip install -r requirements.txt
 pip install openai==0.28.0
 
 # a modified gaussian splatting
-git clone --recursive https://github.com/ashawkey/diff-gaussian-rasterization
-pip install ./diff-gaussian-rasterization
+git clone --recursive https://github.com/Wakals/GASCOL-diff-gaussian-rasterization.git
+pip install ./GASCOL-diff-gaussian-rasterization
 
 # simple-knn
 pip install ./simple-knn
