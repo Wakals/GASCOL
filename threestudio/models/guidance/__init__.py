@@ -9,4 +9,5 @@ from . import (
     stable_zero123_guidance,
     zero123_guidance,
     zero123_unified_guidance,
+    stable_diffusion_3_guidance,
 )

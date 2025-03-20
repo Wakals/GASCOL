@@ -78,6 +78,34 @@ class PromptProcessorOutput:
 
         # IMPORTANT: we return (cond, uncond), which is in different order than other implementations!
         return torch.cat([text_embeddings, uncond_text_embeddings], dim=0)
+    
+    def get_text_embeddings_with_pooled(
+        self,
+        elevation: Float[Tensor, "B"],
+        azimuth: Float[Tensor, "B"],
+        camera_distances: Float[Tensor, "B"],
+        view_dependent_prompting: bool = True,
+    ) -> Float[Tensor, "BB N Nf"]:
+        batch_size = elevation.shape[0]
+
+        if view_dependent_prompting:
+            # Get direction
+            direction_idx = torch.zeros_like(elevation, dtype=torch.long)
+            for d in self.directions:
+                direction_idx[
+                    d.condition(elevation, azimuth, camera_distances)
+                ] = self.direction2idx[d.name]
+
+            # Get text embeddings
+            text_embeddings = self.text_embeddings_vd[direction_idx]  # type: ignore
+            uncond_text_embeddings = self.uncond_text_embeddings_vd[direction_idx]  # type: ignore
+        else:
+            text_embeddings = self.text_embeddings.expand(batch_size, -1, -1)  # type: ignore
+            uncond_text_embeddings = self.uncond_text_embeddings.expand(  # type: ignore
+                batch_size, -1, -1
+            )
+
+        return text_embeddings, uncond_text_embeddings
 
     def get_text_embeddings_perp_neg(
         self,
@@ -190,7 +218,7 @@ class PromptProcessor(BaseObject):
         back_threshold: float = 45.0
         view_dependent_prompt_front: bool = False
         use_cache: bool = True
-        spawn: bool = True
+        spawn: bool = False  # Here to modify as False when use SD3
 
         # perp neg
         use_perp_neg: bool = False
@@ -223,6 +251,7 @@ class PromptProcessor(BaseObject):
 
     def configure(self) -> None:
         self._cache_dir = ".threestudio_cache/text_embeddings"  # FIXME: hard-coded path
+        self._cache_dir_2 = ".threestudio_cache/pooled_text_embeddings"
 
         # view-dependent text embeddings
         self.directions: List[DirectionConfig]
