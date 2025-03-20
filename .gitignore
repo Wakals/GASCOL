@@ -193,9 +193,7 @@ wandb/
 # vscode
 .code-workspace
 
-custom/shap-e
-custom/threestudio-sds-bridge
-custom/threestudio-shap-e
+custom/*
 
 load/tets/256_tets.npz
 
