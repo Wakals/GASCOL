@@ -1,4 +1,8 @@
-# GASCOL
+# HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation
+
+This is the version of HCoG method + GALA3D. The code is tested on `RTX3090` with `Python 3.8`, `torch 2.0.0` and `CUDA 11.8`.
+
+Another version of HCoG + SD3 is in this [repo](https://github.com/Wakals/GASCOL/tree/HCoG_SD3), which is tested on `A100` with `Python 3.11`, `torch 2.4.1` and `CUDA 12.4`.
 
 ## Install
 
