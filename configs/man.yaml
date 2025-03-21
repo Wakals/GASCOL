@@ -4,12 +4,6 @@
 input: 
 seg_prompt: coat
 
-# load_object: ['/network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_A_man_in_coat_is_waving_1_model.ply']
-
-# load_floor: /network_space/server129/qinyiming/GALA3D-main/3d_models/coat_man_shirt_trousers_coat_1101_2/coat_man_shirt_trousers_coat_1101_2_floor_model.ply
-
-# A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving
-# scene: 'A man in coat, trousers, shoes and shirt is waving'
 scene: 'A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving'
 edit_prompt: ['black coat']
 prompt: ['A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hat is waving']
@@ -17,7 +11,7 @@ prompt: ['A man in black coat, yellow shirt, pink trousers, blue leather shoes a
 
 floor:
 
-center: [[0.0, 0.55, 0.0]]
+center: [[0.0, 0.1, 0.0]]
 
 edge: [[0.4, 0.8, 0.4]]
 

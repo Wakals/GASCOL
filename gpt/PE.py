@@ -5,48 +5,28 @@ import pandas as pd
 import re
 import base64
 import requests
-# from openai.error import RateLimitError
-# 目前需要设置代理才可以访问 api
-# os.environ["http_proxy"] = "http://localhost:7890"
-# os.environ["https_proxy"] = "http://localhost:7890"
 
 max_retry = 3
 
-def encode_image(image_path):
-  with open(image_path, "rb") as image_file:
-    return base64.b64encode(image_file.read()).decode('utf-8')
-image_path = "/network_space/server129/qinyiming/GALA3D-main/image_results/man_coat_1019_1/0/60.png"
-
-base64_image = encode_image(image_path)
-
 def get_response(msg):
     response = openai.ChatCompletion.create(
-    # response = openai.chat.completions.create(
     model="gpt-4o",
     messages=[
         {
         "role": "user",
         "content": [
-            {"type": "text", "text": "Here is an image"},
-            {
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{base64_image}"
-            },
-            },
+            {"type": "text", "text": "You are a helpful assistant!"},
             {"type": "text", "text": msg},
         ],
         }
     ],
     max_tokens=300,
-    # api_key = "sb-92061fe4f190e8af067b72e654ebb7956dde80a55e4689b9",
-    api_key = "sk-mpM0Buym5lAVJG2Y0f8c24B375Df49FeBf4e508f18804bE0",
+    api_key = "",
     )
     return response.choices[0].message['content']
 
 
-# openai.api_base = "https://api.openai-sb.com/v1"
-openai.api_base = "https://29qg.com/v1"
+openai.api_base = ""
 
 
 def ImageEvaluate(prompt):
@@ -71,7 +51,7 @@ def get_chain(prompt):
     ques += 'NOTE: please output a set format of json file. The keys are "body", "instances", "stratification_order", "sub_prompts". And the value of "body" is string, the value of "instances" is a dict, the value of "stratification_order" is a list of strings, and the value of "sub_prompts" is a list of strings.'
 
     res = get_response(ques)
-    # print(f"res: {res}")
+    print(f"res: {res}")
     import json
     res = res.strip("```json").strip("```")
     json_dict = json.loads(res)

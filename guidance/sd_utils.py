@@ -41,7 +41,7 @@ class StableDiffusion(nn.Module):
             print(f"[INFO] using hugging face custom model key: {hf_key}")
             model_key = hf_key
         elif self.sd_version == "2.1":
-            model_key = "stable-diffusion-2-1-base"
+            model_key = "stabilityai/stable-diffusion-2-1-base"
         elif self.sd_version == "2.0":
             model_key = "stabilityai/stable-diffusion-2-base"
         elif self.sd_version == "1.5":

@@ -10,9 +10,13 @@ pip install -r requirements_new.txt
 pip install -r requirements.txt
 pip install openai==0.28.0
 
+# adan
+python3 -m pip install git+https://github.com/sail-sg/Adan.git
+
 # a modified gaussian splatting
 git clone --recursive https://github.com/Wakals/GASCOL-diff-gaussian-rasterization.git
-pip install ./GASCOL-diff-gaussian-rasterization
+mv GASCOL-diff-gaussian-rasterization diff-gaussian-rasterization 
+pip install ./diff-gaussian-rasterization
 
 # simple-knn
 pip install ./simple-knn
@@ -24,6 +28,30 @@ pip install ./MVDream
 # ControlNet:
 git clone https://github.com/lllyasviel/ControlNet-v1-1-nightly.git
 pip install ./ControlNet-v1-1-nightly
+
+# lang-sam
+pip install -U git+https://github.com/luca-medeiros/lang-segment-anything.git
+```
+
+However, Lang SAM of 0.1.0 may have been deleted, so you can download the source code from [Google Drive](https://drive.google.com/file/d/1Gtql03SyhhNQbVuW3BcMuoY0qgVWjahj/view?usp=sharing), and follow the [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO) to install it.
+
+To install lang-sam-0.1.0 using the source code, you can first create an Anaconda env, and follow:
+```
+tar -xzvf lang_sam_0.1.0.tar.gz -C /path/to/new/python/env/lib/python3.8/site-packages/
+mkdir /home/user/anaconda3/envs/my_env/lib/python3.8/site-packages/lang_sam-0.1.0.dist-info
+echo "Name: lang-sam" > /home/user/anaconda3/envs/my_env/lib/python3.8/site-packages/lang_sam-0.1.0.dist-info/METADATA
+```
+Following this way, the right structure is:
+```
+site-packages/
+  ├── lang_sam/
+  │   ├── __init__.py
+  │   ├── some_module.py
+  │   └── ...
+  ├── lang_sam-0.1.0.dist-info/
+  │   ├── METADATA
+  │   ├── RECORD
+  │   ├── ...
 ```
 
 Tested on:
@@ -68,5 +96,4 @@ Please check `./configs/man.yaml` for more options.
 This work is built on many amazing research works and open-source projects, thanks a lot to all the authors for sharing!
 
 - [gaussian-splatting](https://github.com/graphdeco-inria/gaussian-splatting) and [diff-gaussian-rasterization](https://github.com/graphdeco-inria/diff-gaussian-rasterization)
-- [threestudio](https://github.com/threestudio-project/threestudio)
-- [dreamgaussian](https://github.com/dreamgaussian/dreamgaussian)
+- [GALA3D](https://github.com/VDIGPKU/GALA3D)

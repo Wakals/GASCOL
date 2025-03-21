@@ -41,7 +41,7 @@ class MVDream(nn.Module):
         self.embeddings_floor = None
 
         self.scheduler = DDIMScheduler.from_pretrained(
-            "stable-diffusion-2-1-base", subfolder="scheduler", torch_dtype=self.dtype
+            "stabilityai/stable-diffusion-2-1-base", subfolder="scheduler", torch_dtype=self.dtype
         )
 
     @torch.no_grad()

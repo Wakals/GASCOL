@@ -190,7 +190,8 @@ class GUI:
 
             if self.enable_sd:
                 self.guidance_sd.get_text_embeds(self.prompt, [self.negative_prompt])
-                self.guidance_sd.get_text_embeds(self.prompt_floor, [self.negative_prompt], floor=True)
+                if self.opt.floor is not None:
+                    self.guidance_sd.get_text_embeds(self.prompt_floor, [self.negative_prompt], floor=True)
 
     def train_step(self, Recur=False):
         starter = torch.cuda.Event(enable_timing=True)
@@ -515,15 +516,6 @@ class GUI:
             self.prepare_train(train_stage=1)
             for i in tqdm.trange(iters):
                 self.train_step()
-
-                # print the lr in the optimizer
-                for chi in self.renderer.gaussians.child:
-                    for param_group in chi.optimizer.param_groups:
-                        for param in param_group['params']:
-                            if param_group["name"] == "xyz":
-                                print(f'Parameter: {param_group["name"]}, Learning Rate: {param_group["lr"]}')
-
-                # raise ValueError('stop')
 
                 if (i + 1) % 1000 == 0 or i == 0:
                     self.save_snapshot(i + 1)

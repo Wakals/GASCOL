@@ -1,0 +1,4 @@
+# ninja log v5
+1	9843	1741917177482114465	/home/yimingqin/workspace/GASCOL/simple-knn/build/temp.linux-x86_64-cpython-39/simple_knn.o	776179fa8db4f44c
+1	16094	1741917183725062828	/home/yimingqin/workspace/GASCOL/simple-knn/build/temp.linux-x86_64-cpython-39/ext.o	c3ec85b8233fae14
+2	45103	1741917212738822896	/home/yimingqin/workspace/GASCOL/simple-knn/build/temp.linux-x86_64-cpython-39/spatial.o	c939d0329ab5cc4d

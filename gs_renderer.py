@@ -180,7 +180,7 @@ class GaussianModel:
         self.spatial_lr_scale = 2.0
         self.color_lr_scale = 1.0
         self.child = []
-        self.object_center = nn.Parameter(torch.tensor(np.asarray(center)).float().cuda().requires_grad_(True))
+        self.object_center = nn.Parameter(torch.tensor(np.asarray(center), dtype=torch.float).float().cuda().requires_grad_(True))
         self.scale_factor = nn.Parameter(torch.tensor(1).float().cuda().requires_grad_(True))
         self.object_edge = edge
         self.floor = None
