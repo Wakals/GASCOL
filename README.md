@@ -1,6 +1,6 @@
 # HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation
 
-The code is tested on `torch 2.4.1` and `CUDA 12.4`
+This is the version of HCoG method + Stable Diffusion v3. The code is tested on `A100` and `torch 2.4.1` and `CUDA 12.4`.
 
 ## Install the requirements
 
@@ -8,19 +8,27 @@ The code is tested on `torch 2.4.1` and `CUDA 12.4`
 pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
 pip install ninja
 pip install openai==0.28.0
-pip install -r requirements_new.txt
+pip install -r requirements.txt
+pip install -U git+https://github.com/luca-medeiros/lang-segment-anything.git
 
 cd custom
 git clone https://github.com/Wakals/HCoG_SD3.git
 
 git clone --recursive https://github.com/Wakals/GASCOL-diff-gaussian-rasterization.git
-pip install ./GASCOL-diff-gaussian-rasterization
+mv GASCOL-diff-gaussian-rasterization diff-gaussian-rasterization      
+pip install ./diff-gaussian-rasterization
 
 pip install ./simple-knn
 
 pip install open3d
 pip install pymeshlab
 ```
+
+## Configure OpenAI's API key
+
+Our code is constructed on the version of `openai==0.28.0`, and the code to call the API can be found in [./threestudio/gpt/PE.py](./threestudio/gpt/PE.py). You should get your api key from [OpenAI API Platform](https://platform.openai.com/api-keys), putting it at L12 in [PE.py](./threestudio/gpt/PE.py) and api base website at L63 in [PE.py](./threestudio/gpt/PE.py).
+
+If you have difficulty of getting api key. You can check the example in [PE.py](./threestudio/gpt/PE.py) and use your convenient large model to get a generation order and fill it in according to the format.
 
 ## Run the example
 

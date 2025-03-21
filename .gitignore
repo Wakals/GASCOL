@@ -202,3 +202,5 @@ run.sh
 
 # check
 ./check
+
+./*diff-gaussian-rasterization

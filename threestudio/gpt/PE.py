@@ -5,12 +5,11 @@ import pandas as pd
 import re
 import base64
 import requests
-# from openai.error import RateLimitError
-# 目前需要设置代理才可以访问 api
-# os.environ["http_proxy"] = "http://localhost:7890"
-# os.environ["https_proxy"] = "http://localhost:7890"
 
 max_retry = 3
+
+### config your api key here
+my_api_key = ""
 
 def get_response_with_img(msg, image_path):
     
@@ -21,7 +20,6 @@ def get_response_with_img(msg, image_path):
     base64_image = encode_image(image_path)
     
     response = openai.ChatCompletion.create(
-    # response = openai.chat.completions.create(
     model="gpt-4o",
     messages=[
         {
@@ -39,7 +37,7 @@ def get_response_with_img(msg, image_path):
         }
     ],
     max_tokens=300,
-    api_key = "sk-79ZH4tvH12nzdSBCD099AeE9C190449e959b096e92B8Dc74",
+    api_key = my_api_key,
     )
     return response.choices[0].message['content']
 
@@ -56,13 +54,13 @@ def get_response(msg):
         }
     ],
     max_tokens=300,
-    api_key = "sk-79ZH4tvH12nzdSBCD099AeE9C190449e959b096e92B8Dc74",
+    api_key = my_api_key,
     )
     return response.choices[0].message['content']
 
 
-# openai.api_base = "https://api.openai-sb.com/v1"
-openai.api_base = "https://29qg.com/v1"
+### configure your api base here
+openai.api_base = ""
 
 
 def ImageEvaluate(attr, part, image_pth):
