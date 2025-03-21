@@ -6,6 +6,7 @@ Another version of HCoG + GALA3D is in this [repo](https://github.com/Wakals/GAS
 
 ## Install the requirements
 
+The requirements is heavily based on [Threestudio](https://github.com/threestudio-project/threestudio).
 ```
 pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
 pip install ninja
@@ -36,6 +37,7 @@ If you have difficulty of getting api key. You can check the example in [PE.py](
 
 ## Run the example
 
+For recreating the example, run:
 ```
 python launch.py --config custom/threestudio-hcog/configs/hcog.yaml  --train --gpu 0 system.prompt_processor.prompt="a man in black coat, yellow shirt inside, green hat, blue shoes, and pink trousers is waving" system.geometry.geometry_convert_from="shap-e:a man in shirt, trousers and shoes is waving"
 ```
