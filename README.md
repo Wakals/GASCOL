@@ -1,6 +1,8 @@
 # HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation
 
-This is the version of HCoG method + Stable Diffusion v3. The code is tested on `A100` and `torch 2.4.1` and `CUDA 12.4`.
+This is the version of HCoG method + Stable Diffusion v3. The code is tested on `A100`, `Python 3.11`, `torch 2.4.1` and `CUDA 12.4`.
+
+Another version of HCoG + GALA3D is in this [repo](https://github.com/Wakals/GASCOL/tree/main), which is tested on `RTX3090` with `Python 3.8`, `torch 2.0.0` and `CUDA 11.8`.
 
 ## Install the requirements
 
@@ -13,6 +15,8 @@ pip install -U git+https://github.com/luca-medeiros/lang-segment-anything.git
 
 cd custom
 git clone https://github.com/Wakals/HCoG_SD3.git
+mv HCoG_SD3 threestudio-hcog
+cd threestudio-hcog
 
 git clone --recursive https://github.com/Wakals/GASCOL-diff-gaussian-rasterization.git
 mv GASCOL-diff-gaussian-rasterization diff-gaussian-rasterization      
@@ -33,5 +37,5 @@ If you have difficulty of getting api key. You can check the example in [PE.py](
 ## Run the example
 
 ```
-python launch.py --config custom/threestudio-gaussiandreamer/configs/gaussiandreamer.yaml  --train --gpu 0 system.prompt_processor.prompt="a man in black coat, yellow shirt inside, green hat, blue shoes, and pink trousers is waving" system.geometry.geometry_convert_from="shap-e:a man in shirt, trousers and shoes is waving"
+python launch.py --config custom/threestudio-hcog/configs/hcog.yaml  --train --gpu 0 system.prompt_processor.prompt="a man in black coat, yellow shirt inside, green hat, blue shoes, and pink trousers is waving" system.geometry.geometry_convert_from="shap-e:a man in shirt, trousers and shoes is waving"
 ```
