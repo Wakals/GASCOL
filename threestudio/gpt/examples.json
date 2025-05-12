@@ -1,0 +1,46 @@
+{
+    "man": {
+    "body": "The man is waving",
+    "instances": {
+        "coat": "black",
+        "shirt": "yellow",
+        "trousers": "pink",
+        "shoes": "blue",
+        "hat": "green"
+    },
+    "stratification_order": [
+        "green hat",
+        "pink trousers",
+        "blue shoes",
+        "yellow shirt",
+        "EXTEND",
+        "black coat"
+    ],
+    "sub_prompts": [
+        "A man in yellow shirt, pink trousers, green hat and blue shoes is waving",
+        "A man in shirt, trousers, hat, shoes and black coat is waving"
+    ]
+    },
+    "clown": {
+        "body": "a clown with red nose and white face",
+        "instances": {
+          "wig": "green",
+          "shirt": "yellow-green",
+          "jacket": "red",
+          "pants": "red",
+          "shoes": "black"
+        },
+        "stratification_order": [
+          "yellow-green shirt",
+          "red pants",
+          "black shoes",
+          "green wig",
+          "EXTEND",
+          "red jacket"
+        ],
+        "sub_prompts": [
+          "a clown with red nose and white face, wears green wig, red pants, black shoes and yellow-green shirt",
+          "a clown with red nose and white face, wears pants, shirt, shoes, wig and red jacket"
+        ]
+      }
+}
