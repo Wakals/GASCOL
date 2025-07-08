@@ -1,4 +1,4 @@
-# HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation
+# HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation (CVPR 2025)
 
 <a href='https://hierarchical-chain-of-generation.github.io/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
 <a href='https://arxiv.org/abs/2505.05505'><img src='https://img.shields.io/badge/HCoG-Arxiv-red'></a>
