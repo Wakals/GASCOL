@@ -43,3 +43,16 @@ python launch.py --config custom/threestudio-hcog/configs/hcog.yaml  --train --g
 ```
 
 In order to fine-tune the generated results, you can adjust the parameters in `./custom/threestudio-hcog/configs/hcog.yaml`. For example, you can adjust the `guidance_scale` to generate different smoothness results. Large `guidance_scale` performs fine-grained and low performs smooth. Besides, you can pay attention to the init prompt `system.geometry.geometry_convert_from` of shap-e, because it does have some influence on the final results.
+
+## Evaluate the results
+
+To evaluate the results generated above, run:
+```
+# calculate clip socre
+pip install clip-score
+bash eval_clip_score.sh
+
+# calculate BLIP-VQA score
+bash eval_BLIP_VQA_score.sh
+```
+The results will be found under the dir of `./eval_outputs`.
