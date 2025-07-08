@@ -46,7 +46,7 @@ In order to fine-tune the generated results, you can adjust the parameters in `.
 
 ## Evaluate the results
 
-To evaluate the results generated above, run:
+To evaluate the results generated above, follow [T2I-CompBench](https://github.com/Karine-Huang/T2I-CompBench) to establish the dependencies, and run:
 ```
 # calculate clip socre
 pip install clip-score
