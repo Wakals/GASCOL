@@ -9,7 +9,7 @@ import requests
 max_retry = 3
 
 ### config your api key here
-my_api_key = ""
+my_api_key = "sk-79ZH4tvH12nzdSBCD099AeE9C190449e959b096e92B8Dc74"
 
 def get_response_with_img(msg, image_path):
     
@@ -60,12 +60,12 @@ def get_response(msg):
 
 
 ### configure your api base here
-openai.api_base = ""
+openai.api_base = "https://29qg.com/v1"
 
 
 def ImageEvaluate(attr, part, image_pth):
 
-    ques = "Look at this figuire, and if the " + part + " is " + attr + ", please say 'YES' only. If the " + part + " is not " + attr + ", please say 'NO' only. Don't say anything else."
+    ques = "Look at this figure, and if the " + part + " is " + attr + ", please say 'YES' only. If the " + part + " is not " + attr + ", please say 'NO' only. Don't say anything else."
 
     res = get_response_with_img(ques, image_pth)
 
@@ -159,48 +159,48 @@ def get_chain(prompt):
     # ques += 'NOTE: please only output a set format of json file. The keys are "body", "instances", "stratification_order", "sub_prompts". And the value of "body" is string, the value of "instances" is a dict, the value of "stratification_order" is a list of strings, and the value of "sub_prompts" is a list of strings.'
     
     ques = make_prompt(prompt)
-    res = get_response(ques)
+    # res = get_response(ques)
     
-    print(f"the type of res is {type(res)}, res: {res}")
-    import json
-    idx = 0
-    idx_2 = 0
-    for i in range(len(res)):
-        if res[i] == "`":
-            idx = i
-            break
-    for i in range(idx+5, len(res)):
-        if res[i] == "`":
-            idx_2 = i+2
-            break
-    res = res[idx:idx_2]
-    res = res.strip("```json").strip("```")
+    # print(f"the type of res is {type(res)}, res: {res}")
+    # import json
+    # idx = 0
+    # idx_2 = 0
+    # for i in range(len(res)):
+    #     if res[i] == "`":
+    #         idx = i
+    #         break
+    # for i in range(idx+5, len(res)):
+    #     if res[i] == "`":
+    #         idx_2 = i+2
+    #         break
+    # res = res[idx:idx_2]
+    # res = res.strip("```json").strip("```")
     
-    json_dict = json.loads(res)
+    # json_dict = json.loads(res)
     
     ### an example
-    # json_dict = {
-    #     "body": "a clown with red nose and white face",
-    #     "instances": {
-    #       "wig": "green",
-    #       "shirt": "yellow-green",
-    #       "jacket": "red",
-    #       "pants": "red",
-    #       "shoes": "black"
-    #     },
-    #     "stratification_order": [
-    #       "yellow-green shirt",
-    #       "red pants",
-    #       "black shoes",
-    #       "green wig",
-    #       "EXTEND",
-    #       "red jacket"
-    #     ],
-    #     "sub_prompts": [
-    #       "a clown with red nose and white face, wears green wig, red pants, black shoes and yellow-green shirt",
-    #       "a clown with red nose and white face, wears red jacket pants, shirt, shoes and green wig"
-    #     ]
-    #   }
+    json_dict = {
+        "body": "The man is waving",
+        "instances": {
+            "coat": "black",
+            "shirt": "yellow",
+            "trousers": "pink",
+            "shoes": "blue",
+            "hat": "green"
+        },
+        "stratification_order": [
+            "green hat",
+            "pink trousers",
+            "blue shoes",
+            "yellow shirt",
+            "EXTEND",
+            "black coat"
+        ],
+        "sub_prompts": [
+            "A man in yellow shirt, pink trousers, green hat and blue shoes is waving",
+            "A man in black coat, shirt, trousers, hat and shoes is waving"
+        ]
+    }
     return json_dict
 
 
