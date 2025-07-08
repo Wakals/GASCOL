@@ -159,48 +159,48 @@ def get_chain(prompt):
     # ques += 'NOTE: please only output a set format of json file. The keys are "body", "instances", "stratification_order", "sub_prompts". And the value of "body" is string, the value of "instances" is a dict, the value of "stratification_order" is a list of strings, and the value of "sub_prompts" is a list of strings.'
     
     ques = make_prompt(prompt)
-    # res = get_response(ques)
+    res = get_response(ques)
     
     # print(f"the type of res is {type(res)}, res: {res}")
-    # import json
-    # idx = 0
-    # idx_2 = 0
-    # for i in range(len(res)):
-    #     if res[i] == "`":
-    #         idx = i
-    #         break
-    # for i in range(idx+5, len(res)):
-    #     if res[i] == "`":
-    #         idx_2 = i+2
-    #         break
-    # res = res[idx:idx_2]
-    # res = res.strip("```json").strip("```")
+    import json
+    idx = 0
+    idx_2 = 0
+    for i in range(len(res)):
+        if res[i] == "`":
+            idx = i
+            break
+    for i in range(idx+5, len(res)):
+        if res[i] == "`":
+            idx_2 = i+2
+            break
+    res = res[idx:idx_2]
+    res = res.strip("```json").strip("```")
     
-    # json_dict = json.loads(res)
+    json_dict = json.loads(res)
     
     ### an example
-    json_dict = {
-        "body": "The man is waving",
-        "instances": {
-            "coat": "black",
-            "shirt": "yellow",
-            "trousers": "pink",
-            "shoes": "blue",
-            "hat": "green"
-        },
-        "stratification_order": [
-            "green hat",
-            "pink trousers",
-            "blue shoes",
-            "yellow shirt",
-            "EXTEND",
-            "black coat"
-        ],
-        "sub_prompts": [
-            "A man in yellow shirt, pink trousers, green hat and blue shoes is waving",
-            "A man in black coat, shirt, trousers, hat and shoes is waving"
-        ]
-    }
+    # json_dict = {
+    #     "body": "The man is waving",
+    #     "instances": {
+    #         "coat": "black",
+    #         "shirt": "yellow",
+    #         "trousers": "pink",
+    #         "shoes": "blue",
+    #         "hat": "green"
+    #     },
+    #     "stratification_order": [
+    #         "green hat",
+    #         "pink trousers",
+    #         "blue shoes",
+    #         "yellow shirt",
+    #         "EXTEND",
+    #         "black coat"
+    #     ],
+    #     "sub_prompts": [
+    #         "A man in yellow shirt, pink trousers, green hat and blue shoes is waving",
+    #         "A man in black coat, shirt, trousers, hat and shoes is waving"
+    #     ]
+    # }
     return json_dict
 
 
