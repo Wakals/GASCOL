@@ -207,4 +207,4 @@ check
 
 ./eval_outputs
 
-./T2I-CompBench
+T2I-CompBench/
