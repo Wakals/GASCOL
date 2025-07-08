@@ -205,6 +205,6 @@ check
 
 ./*diff-gaussian-rasterization
 
-./eval_outputs
+eval_outputs/
 
 T2I-CompBench/
