@@ -5,6 +5,8 @@
     <a href='https://arxiv.org/abs/2505.05505'><img src='https://img.shields.io/badge/HCoG-Arxiv-red'></a>
 </div>
 
+---
+
 This is the version of HCoG method + Stable Diffusion v3. The code is tested on `A100`, `Python 3.11`, `torch 2.4.1` and `CUDA 12.4`.
 
 Another version of HCoG + GALA3D is in this [repo](https://github.com/Wakals/GASCOL/tree/main), which is tested on `RTX3090` with `Python 3.8`, `torch 2.0.0` and `CUDA 11.8`.
