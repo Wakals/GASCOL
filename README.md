@@ -11,9 +11,7 @@ This is the version of HCoG method + Stable Diffusion v3. The code is tested on 
 
 Another version of HCoG + GALA3D is in this [repo](https://github.com/Wakals/GASCOL/tree/main), which is tested on `RTX3090` with `Python 3.8`, `torch 2.0.0` and `CUDA 11.8`.
 
-<div style="text-align: center;">
-    <video src="assets/man_sunglasses.mp4" width="540" controls></video>
-</div>
+<video src="assets/man_mix.mp4" width="540" controls></video>
 
 ## <img src="assets/logo_low.png" width="20" style="vertical-align: middle;"/> Overview
 
