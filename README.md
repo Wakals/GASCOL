@@ -1,9 +1,9 @@
 # HCoG: Apply Hierarchical-Chain-of-Generation to Complex Attributes Text-to-3D Generation (CVPR 2025)
 
-<div style="text-align: center;">
+<p align="center">
     <a href='https://hierarchical-chain-of-generation.github.io/'><img src='https://img.shields.io/badge/Project-Page-Green'></a>
     <a href='https://arxiv.org/abs/2505.05505'><img src='https://img.shields.io/badge/HCoG-Arxiv-red'></a>
-</div>
+</p>
 
 ---
 
@@ -11,9 +11,9 @@ This is the version of HCoG method + Stable Diffusion v3. The code is tested on 
 
 Another version of HCoG + GALA3D is in this [repo](https://github.com/Wakals/GASCOL/tree/main), which is tested on `RTX3090` with `Python 3.8`, `torch 2.0.0` and `CUDA 11.8`.
 
-<div style="text-align: center;">
+<p align="center">
     <img src="assets/poster_flat.png" width="640" style="vertical-align: middle;"/>
-</div>
+</p>
 
 ## <img src="assets/logo_low.png" width="20" style="vertical-align: middle;"/> Overview
 
