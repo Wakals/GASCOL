@@ -9,7 +9,7 @@ import requests
 max_retry = 3
 
 ### config your api key here
-my_api_key = "sk-79ZH4tvH12nzdSBCD099AeE9C190449e959b096e92B8Dc74"
+my_api_key = ""
 
 def get_response_with_img(msg, image_path):
     
@@ -60,7 +60,8 @@ def get_response(msg):
 
 
 ### configure your api base here
-openai.api_base = "https://29qg.com/v1"
+# openai.api_base = "https://29qg.com/v1"
+openai.api_base = "https://api.openai-sb.com/v1"
 
 
 def ImageEvaluate(attr, part, image_pth):
