@@ -1,1 +1,0 @@
-BLIP-VQA score:0.844675
