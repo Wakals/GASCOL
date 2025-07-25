@@ -24,8 +24,6 @@ Recent text-to-3D generation models have demonstrated remarkable abilities in pr
 The requirements is heavily based on [Threestudio](https://github.com/threestudio-project/threestudio).
 ```
 pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu124
-pip install ninja
-pip install openai==0.28.0
 pip install -r requirements.txt
 pip install -U git+https://github.com/luca-medeiros/lang-segment-anything.git
 
@@ -39,9 +37,6 @@ mv GASCOL-diff-gaussian-rasterization diff-gaussian-rasterization
 pip install ./diff-gaussian-rasterization
 
 pip install ./simple-knn
-
-pip install open3d
-pip install pymeshlab
 ```
 
 ## 🤖 Configure OpenAI's API key

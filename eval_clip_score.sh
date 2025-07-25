@@ -23,19 +23,19 @@ fi
 find "$ROOT" -mindepth 2 -maxdepth 2 -type d -name "save" | while read SAVE_PARENT; do
     SUB_SAVE=$(find "$SAVE_PARENT" -mindepth 1 -maxdepth 1 -type d | head -n1)
     if [ -z "$SUB_SAVE" ]; then
-        echo "没有找到$SAVE_PARENT下的子文件夹，跳过"
+        echo "No sub folder under $SAVE_PARENT, skip"
         continue
     fi
 
     IMAGES=($(find "$SUB_SAVE" -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | sort | head -20))
     if [ "${#IMAGES[@]}" -eq 0 ]; then
-        echo "$SUB_SAVE下无图片，跳过"
+        echo "No images under $SUB_SAVE, skip"
         continue
     fi
 
     PARSED_YAML=$(dirname "$SAVE_PARENT")/configs/parsed.yaml
     if [ ! -f "$PARSED_YAML" ]; then
-        echo "$PARSED_YAML 不存在，跳过"
+        echo "$PARSED_YAML not found, skip"
         continue
     fi
     PROMPT=$(yq '.system.prompt_processor.prompt' "$PARSED_YAML")

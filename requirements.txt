@@ -41,3 +41,12 @@ git+https://github.com/openai/CLIP.git
 
 #controlnet
 controlnet_aux
+
+# ninja
+pip install ninja
+
+# openai
+pip install openai==0.28.0
+
+pip install open3d
+pip install pymeshlab
