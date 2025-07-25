@@ -60,10 +60,10 @@ To evaluate the results generated above, follow [T2I-CompBench](https://github.c
 ```
 # calculate clip socre
 pip install clip-score
-bash eval_clip_score.sh
+bash eval/eval_clip_score.sh
 
 # calculate BLIP-VQA score
-bash eval_BLIP_VQA_score.sh
+bash eval/eval_BLIP_VQA_score.sh
 ```
 The results will be found under the dir of `./eval_outputs`.
 
