@@ -51,13 +51,11 @@ python BLIP_vqa.py --out_dir="$out_dir" | tee "$BLIP_LOG"
 
 # The prompts used for evaluation
 
-# "A man in black coat, yellow shirt, pink trousers and blue shoes is waving."
-# "A man in black coat, yellow shirt, pink trousers, blue leather shoes and green hats is waving."
-# "A cartoon girl wears gray shirt, blue skirt, yellow shoes, pink jacket and brown hat is smiling."
-# "A cartoon girl with short hair wears gray shirt, blue skirt, yellow shoes, pink jacket and brown hat is dancing."
-# "A yellow dog wears a white shirt, two pairs of pink shoes, and a blue hat."
-# "A yellow dog wears a pink shirt, two pairs of pink shoes, and a blue collar."
-# "A boy wears blue shirt with a yellow star on it, gray trousers, blue sport shoes, purple wizard hat and blue jacket."
-# "A boy wears blue shirt with a yellow star on it, gray trousers, blue sport shoes, purple wizard hat and blue jacket, holding a magic stick."
-# "A clown with red nose and white face, wears green wig, black shoes, yellow shirt, red jacket, and red pants."
-
+# "a man in black coat, yellow shirt, pink trousers and blue shoes is waving."
+# "a man in black coat, yellow shirt, pink trousers, blue leather shoes and green hats is waving."
+# "a cartoon girl wears gray shirt, blue skirt, yellow shoes, pink jacket and brown hat is smiling."
+# "a cartoon girl with short hair wears gray shirt, blue skirt, yellow shoes, pink jacket and brown hat is dancing."
+# "a yellow dog wears a white shirt, two pairs of pink shoes, and a blue hat."
+# "a yellow dog wears a pink shirt, two pairs of pink shoes, and a blue collar."
+# "a boy wears blue shirt with a yellow star on it, gray trousers, blue sport shoes, purple wizard hat and blue jacket."
+# "a boy wears blue shirt with a yellow star on it, gray trousers, blue sport shoes, purple wizard hat and blue jacket, holding a magic stick."

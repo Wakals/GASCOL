@@ -52,4 +52,4 @@ find "$ROOT" -mindepth 2 -maxdepth 2 -type d -name "save" | while read SAVE_PARE
 done
 
 > "$LOG_FILE"
-python -m clip_score "$IMG_DIR" "$TXT_DIR" >> "$LOG_FILE" 2>&1
+python -m clip_score "$IMG_DIR" "$TXT_DIR" --batch-size 1 >> "$LOG_FILE" 2>&1

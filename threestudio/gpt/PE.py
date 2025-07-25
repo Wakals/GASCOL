@@ -181,27 +181,27 @@ def get_chain(prompt):
     
     ### an example
     # json_dict = {
-    #     "body": "The man is waving",
+    #     "body": "a clown with red nose and white face",
     #     "instances": {
-    #         "coat": "black",
-    #         "shirt": "yellow",
-    #         "trousers": "pink",
-    #         "shoes": "blue",
-    #         "hat": "green"
+    #       "wig": "green",
+    #       "shirt": "yellow-green",
+    #       "jacket": "red",
+    #       "pants": "red",
+    #       "shoes": "black"
     #     },
     #     "stratification_order": [
-    #         "green hat",
-    #         "pink trousers",
-    #         "blue shoes",
-    #         "yellow shirt",
-    #         "EXTEND",
-    #         "black coat"
+    #       "yellow-green shirt",
+    #       "red pants",
+    #       "black shoes",
+    #       "green wig",
+    #       "EXTEND",
+    #       "red jacket"
     #     ],
     #     "sub_prompts": [
-    #         "A man in yellow shirt, pink trousers, green hat and blue shoes is waving",
-    #         "A man in black coat, shirt, trousers, hat and shoes is waving"
+    #       "a clown with red nose and white face, wears green wig, red pants, black shoes and yellow-green shirt",
+    #       "a clown with red nose and white face, wears pants, shirt, shoes, wig and red jacket"
     #     ]
-    # }
+    #   }
     return json_dict
 
 
