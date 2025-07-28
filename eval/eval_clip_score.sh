@@ -27,7 +27,7 @@ find "$ROOT" -mindepth 2 -maxdepth 2 -type d -name "save" | while read SAVE_PARE
         continue
     fi
 
-    IMAGES=($(find "$SUB_SAVE" -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | sort | head -20))
+    IMAGES=($(find "$SUB_SAVE" -type f \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \) | shuf | head -20))
     if [ "${#IMAGES[@]}" -eq 0 ]; then
         echo "No images under $SUB_SAVE, skip"
         continue
@@ -52,4 +52,5 @@ find "$ROOT" -mindepth 2 -maxdepth 2 -type d -name "save" | while read SAVE_PARE
 done
 
 > "$LOG_FILE"
+python eval/crop.py
 python -m clip_score "$IMG_DIR" "$TXT_DIR" --batch-size 1 >> "$LOG_FILE" 2>&1
